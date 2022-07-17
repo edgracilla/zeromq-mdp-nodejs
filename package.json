@@ -1,0 +1,28 @@
+{
+  "name": "zeromq-mdp-nodejs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "broker": "npm run build && node ./dist/run-broker.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edgracilla/zeromq-mdp-nodejs.git"
+  },
+  "keywords": [],
+  "author": "Edd Gracilla",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/edgracilla/zeromq-mdp-nodejs/issues"
+  },
+  "homepage": "https://github.com/edgracilla/zeromq-mdp-nodejs#readme",
+  "dependencies": {
+    "zeromq": "^6.0.0-beta.6"
+  },
+  "devDependencies": {
+    "eslint": "^8.20.0",
+    "typescript": "^4.7.4"
+  }
+}
