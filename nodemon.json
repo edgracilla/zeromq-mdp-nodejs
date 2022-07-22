@@ -1,0 +1,6 @@
+{
+  "watch": ["src", "tsconfig.json", "index.ts"],
+  "ext": "ts",
+  "ignore": ["src/**/*.spec.ts", "src/**/*.d.ts"],
+  "exec": "npm run build && node ./build/run-broker.js"
+}

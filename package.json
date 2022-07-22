@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "broker": "npm run build && node ./dist/run-broker.js"
+    "broker": "npm run build && node ./build/run-broker.js",
+    "client": "npm run build && node ./build/run-client.js",
+    "worker": "npm run build && node ./build/run-worker.js"
   },
   "repository": {
     "type": "git",
@@ -22,7 +24,9 @@
     "zeromq": "^6.0.0-beta.6"
   },
   "devDependencies": {
+    "@types/node": "^18.0.5",
     "eslint": "^8.20.0",
+    "ts-node": "^10.9.1",
     "typescript": "^4.7.4"
   }
 }
