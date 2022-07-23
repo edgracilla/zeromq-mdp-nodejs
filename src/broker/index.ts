@@ -4,7 +4,6 @@ import Service from './service'
 import { Router } from 'zeromq'
 import { Header, Message } from '../types'
 
-
 const { CLIENT, WORKER } = Header
 const { READY, REPLY, DISCONNECT, HEARTBEAT } = Message
 
@@ -29,8 +28,6 @@ class Broker {
     await this.socket.bind(this.address)
 
     for await (const [sender,, header, ...rest] of this.socket) {
-      logger.info(`[${header.toString()}] ${sender.toString('hex')}`)
-
       switch (header.toString()) {
         case CLIENT: this.handleClient(sender, ...rest); break
         case WORKER: this.handleWorker(sender, ...rest); break
@@ -70,12 +67,11 @@ class Broker {
   }
 
   handleClient(client: Buffer, service?: Buffer, ...req: Buffer[]) {
+    const [fn] = req
+
+    logger.info(`[${CLIENT}] ${client.toString('hex')} -> ${service?.toString()}.${fn}()`)
+
     if (service) {
-      console.log({
-        client: client.toString('hex'),
-        service: service.toString(),
-        req: req.toString(),
-      })
       this.getService(service).dispatchRequest(client, service, ...req)
     }
   }

@@ -1,7 +1,11 @@
-import { Router } from 'zeromq'
-import { Header } from '../types'
+import logger from '../logger'
 
-const { CLIENT } = Header
+import { Router } from 'zeromq'
+import { Header, Message } from '../types'
+
+const { REQUEST } = Message
+const { CLIENT, WORKER } = Header
+
 class Service {
   name: string
   socket: Router
@@ -15,32 +19,48 @@ class Service {
   }
 
   addWorker(worker: Buffer) {
-    console.log(` addWorker: ${worker.toString('hex')} for ${this.name}`)
-    this.workers.set(worker.toString('hex'), worker)
-    // this.dispatchPending()
+    const strWorker = worker.toString('hex')
+
+    logger.info(`[${this.name}] addWorker: ${strWorker}`)
+    this.workers.set(strWorker, worker)
+    // this.consumeRequests()
   }
 
   removeWorker(worker: Buffer) {
-    console.log(` removeWorker: ${worker.toString('hex')} for ${this.name}`)
-    this.workers.delete(worker.toString('hex'))
-    // this.dispatchPending()
+    const strWorker = worker.toString('hex')
+
+    logger.info(`[${this.name}] rmvWorker: ${strWorker}`)
+    this.workers.delete(strWorker)
+    // this.consumeRequests()
   }
 
   dispatchRequest(client: Buffer, ...req: Buffer[]) {
     this.requests.push([client, req])
-    // this.dispatchPending()
+    this.consumeRequests()
   }
 
   async dispatchReply(worker: Buffer, client: Buffer, ...rep: Buffer[]) {
-    const strWorker = worker.toString('hex') 
-    const strClient = client.toString('hex') 
+    const strWorker = worker.toString('hex')
+    const strClient = client.toString('hex')
 
-    console.log(` dispatchReply: ${this.name} ` +`${strClient} <- rep ${strWorker}`)
+    logger.info(`[${this.name}] ${strClient}.req <- ${strWorker}.rep`)
 
     this.workers.set(strWorker, worker)
     await this.socket.send([client, null, CLIENT, this.name, ...rep])
 
-    // this.dispatchPending()
+    // this.consumeRequests()
+  }
+
+  async consumeRequests() {
+    while (this.workers.size && this.requests.length) {
+      const [key, worker] = this.workers.entries().next().value!
+      const [client, req] = this.requests.shift()!
+
+      this.workers.delete(key)
+
+      logger.info(`[${this.name}] ${client.toString('hex')}.req -> ${worker.toString('hex')}`)
+      await this.socket.send([worker, null, WORKER, REQUEST, client, null, ...req])
+    }
   }
 }
 

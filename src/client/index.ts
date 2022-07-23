@@ -1,15 +1,27 @@
+import logger from '../logger'
+
 import { Request } from 'zeromq'
 import { Header } from '../types'
 
 const { CLIENT } = Header
 
+interface ClientOption {
+  address: string,
+  timeout?: number
+}
+
 class Client {
   address: string
+  timeout: number
   socket: Request
 
-  constructor (address: string) {
+  constructor (option: ClientOption) {
+    const { address, timeout } = option
+
     this.address = address
-    this.socket = new Request({ receiveTimeout: 3000 })
+    this.timeout = timeout || 5000
+
+    this.socket = new Request({ receiveTimeout: this.timeout })
     this.socket.connect(address)
   }
   
@@ -17,11 +29,11 @@ class Client {
     await this.socket.send([CLIENT, service, fn, ...params])
 
     try {
-      const [blank, header, ...res] = await this.socket.receive()
+      const [, header, ...res] = await this.socket.receive()
       console.log(`received '${res.join(", ")}' from '${service}'`)
       return res
     } catch (err) {
-      console.log(`Timeout: ${service}`)
+      logger.warn(`Timeout: calling service '${service}' (${this.timeout / 1000}s)`)
     }
   }
     
