@@ -1,6 +1,10 @@
 import { Worker } from './index'
 
-const worker = new Worker('svc1', 'tcp://127.0.0.1:4000');
+const worker = new Worker({
+  group: 'svc1',
+  address: 'tcp://127.0.0.1:4000',
+  hearbeat: 3000
+});
 
 // --
 
@@ -33,8 +37,6 @@ const main = async () => {
 }
 
 main()
-
-// --
 
 // -- app exit handler
 

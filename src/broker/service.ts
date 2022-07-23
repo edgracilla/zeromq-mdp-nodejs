@@ -23,7 +23,7 @@ class Service {
 
     logger.info(`[${this.name}] addWorker: ${strWorker}`)
     this.workers.set(strWorker, worker)
-    // this.consumeRequests()
+    this.consumeRequests('ADW')
   }
 
   removeWorker(worker: Buffer) {
@@ -31,34 +31,38 @@ class Service {
 
     logger.info(`[${this.name}] rmvWorker: ${strWorker}`)
     this.workers.delete(strWorker)
-    // this.consumeRequests()
+    this.consumeRequests('RMW')
   }
 
   dispatchRequest(client: Buffer, ...req: Buffer[]) {
     this.requests.push([client, req])
-    this.consumeRequests()
+    this.consumeRequests('DRQ')
   }
 
-  async dispatchReply(worker: Buffer, client: Buffer, ...rep: Buffer[]) {
+  async dispatchReply(worker: Buffer, client: Buffer, rep: Buffer) {
     const strWorker = worker.toString('hex')
     const strClient = client.toString('hex')
 
-    logger.info(`[${this.name}] ${strClient}.req <- ${strWorker}.rep`)
+    logger.info(`[${this.name}] dispatch: ${strClient}.req <- ${strWorker}.rep`)
 
     this.workers.set(strWorker, worker)
-    await this.socket.send([client, null, CLIENT, this.name, ...rep])
+    await this.socket.send([client, null, CLIENT, this.name, rep])
 
-    // this.consumeRequests()
+    this.consumeRequests('DRP')
   }
 
-  async consumeRequests() {
+  async consumeRequests(origin: string) {
     while (this.workers.size && this.requests.length) {
       const [key, worker] = this.workers.entries().next().value!
       const [client, req] = this.requests.shift()!
-
+      
       this.workers.delete(key)
+      
+      const [, fn] = req
+      const strWorker = worker.toString('hex')
+      const strClient = client.toString('hex')
 
-      logger.info(`[${this.name}] ${client.toString('hex')}.req -> ${worker.toString('hex')}`)
+      logger.info(`[${this.name}] consumes: ${strClient}.req -> ${strWorker}.${fn} -- ${origin}`)
       await this.socket.send([worker, null, WORKER, REQUEST, client, null, ...req])
     }
   }

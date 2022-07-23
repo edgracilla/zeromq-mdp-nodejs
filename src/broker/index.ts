@@ -39,24 +39,29 @@ class Broker {
     switch (type && type.toString()) {
       case READY: {
         const [service] = rest
-        this.workers.set(worker.toString('hex'), service)
+        const strWorker = worker.toString('hex')
+
+        this.workers.set(strWorker, service)
         this.getService(service).addWorker(worker)
         break
       }
 
       case REPLY: {
-        const [client,, ...rep] = rest
-        this.dispatchReply(worker, client, ...rep)
+        const [client,, rep] = rest
+        const service = this.getWorkerService(worker)
+
+        if (service) this.getService(service).dispatchReply(worker, client, rep)
         break
       }
 
       case HEARTBEAT:
         /* Heartbeats not implemented yet. */
+        logger.info(rest.toString())
         break
 
       case DISCONNECT: {
         const service = this.getWorkerService(worker)
-        this.getService(service).removeWorker(worker)
+        if (service) this.getService(service).removeWorker(worker)
         break
       }
 
@@ -82,26 +87,20 @@ class Broker {
     if (this.services.has(key)) {
       return this.services.get(key)!
     } else {
-      const svc = new Service(this.socket, key)
-      this.services.set(key, svc)
+      const service = new Service(this.socket, key)
+      this.services.set(key, service)
 
-      return svc
+      return service
     }
   }
 
   getWorkerService(worker: Buffer): Buffer {
     return this.workers.get(worker.toString('hex'))!
   }
-
-  dispatchReply(worker: Buffer, client: Buffer, ...rep: Buffer[]) {
-    const service = this.getWorkerService(worker)
-
-    this.getService(service).dispatchReply(worker, client, ...rep)
-  }
 }
 
 export default Broker
 
-// zmdp-suite
-// zmdp-suite
-// zmdp-suite
+// zmdp-ms-suite
+// zmdp-ms-suite
+// zmdp-ms-suite
