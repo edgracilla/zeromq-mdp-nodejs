@@ -4,24 +4,6 @@ import { Header, Message } from '../types'
 const { WORKER } = Header
 const { READY, REPLY, DISCONNECT } = Message
 
-// class Worker {
-//   group: string
-//   socket: Dealer
-//   address: string
-
-//   constructor (group: string, address: string) {
-//     this.group = group
-//     this.address = address
-
-//     this.socket = new Dealer()
-//     this.socket.connect(address)
-//   }
-
-
-// export default Worker
-
-// import { Request } from 'zeromq'
-
 class Worker {
   group: string
   socket: Dealer
