@@ -48,11 +48,11 @@ class Worker {
 
     logger.info(`[${this.group}] worker started. ls(${this.heartbeatLiveness})`)
 
-    for await (const [, header, type, client,, ...req] of this.socket) {
-      console.log('--wh', header.toString())
-
+    for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
       this.liveness = this.heartbeatLiveness
       const rep = await this.process(client, ...req)
+
+      console.log('--wh', header.toString(), rep)
 
       try {
         await this.socket.send([null, WORKER, REPLY, client, null, rep])
@@ -88,7 +88,7 @@ class Worker {
     }
 
     if (!this.socket.closed) {
-      await this.socket.send([null, WORKER, DISCONNECT, this.group])
+      await this.socket.send([null, WORKER, DISCONNECT])
       this.socket.close()
     }
   }

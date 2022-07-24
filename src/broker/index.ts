@@ -34,17 +34,42 @@ class Broker {
       }
     }
   }
+  
+  handleClient(client: Buffer, ...rest: Buffer[]) {
+    const cStrId = client.toString('hex')
+    const [serviceBuf, ...req] = rest
 
-  handleWorker(worker: Buffer, type?: Buffer, ...rest: Buffer[]) {
+    const svcName = serviceBuf.toString()
+    const service = this.services.get(svcName)!
+    const fn = req[0].toString()
+
+    if (!svcName) return logger.warn(`[${CLIENT}] ${cStrId}.req -> empty service name!`)
+    if (!service) return logger.warn(`[${CLIENT}] ${cStrId}.req -> '${svcName}' no worker yet`)
+
+    logger.info(`[${CLIENT}] ${cStrId}.req -> ${svcName}.${fn}`)
+    service.dispatchClientRequest(client, ...req)
+  }
+
+  handleWorker(worker: Buffer, ...rest: Buffer[]) {
+    const [type, ...req] = rest
+
+    const msgType = type.toString()
     const wStrId = worker.toString('hex')
-    const msgType = type && type.toString()
-    const mightWorkerExist = msgType !== READY
+    const mightSvcExist = msgType !== READY
 
-    const svcName = mightWorkerExist
+    const svcName = mightSvcExist
       ? this.svcWorkerIndex.get(wStrId)!
-      : rest[0].toString()
+      : req[0].toString()
 
-    const service = this.getService(svcName)
+    const svcExist = this.services.has(svcName)
+
+    const service = svcExist
+      ? this.services.get(svcName)!
+      : new Service(this.socket, svcName)
+
+    if (!svcExist) {
+      this.services.set(svcName, service)
+    }
 
     if (!svcName) return logger.warn(`Worker ${wStrId} not in worker/service index.`)
     if (!service) return logger.warn(`Service '${svcName}' not found.`)
@@ -57,54 +82,24 @@ class Broker {
       }
 
       case REPLY: {
-        const [client,, rep] = rest
-        service.dispatchReply(worker, client, rep)
+        const [client, blank, rep] = req
+        service.dispatchWorkerReply(worker, client, rep)
         break
       }
 
       case HEARTBEAT:
         logger.info(`HB ${wStrId}`)
-        service.resetLiveness(worker)
+        service.resetWorkerLiveness(wStrId)
         break
 
       case DISCONNECT: {
-        service.removeWorker(worker)
+        service.removeWorker(wStrId)
         break
       }
 
       default: {
         logger.warn(`Invalid worker message type: ${type}`)
       }
-    }
-  }
-
-  handleClient(client: Buffer, serviceBuf?: Buffer, ...req: Buffer[]) {
-    const svcName = serviceBuf?.toString()
-    const cStrId = client.toString('hex')
-    const fn = req[0].toString()
-
-    if (!svcName) {
-      return logger.warn(`[${CLIENT}] ${cStrId}.req -> empty service`)
-    }
-  
-    logger.info(`[${CLIENT}] ${cStrId}.req -> ${svcName}.${fn}`)
-    const service = this.getService(svcName)
-
-    if (!service) {
-      return logger.warn(`[${CLIENT}] ${cStrId}.req -> service not found!`)
-    }
-
-    service.dispatchRequest(client, ...req)
-  }
-
-  getService(name: string): Service {
-    if (this.services.has(name)) {
-      return this.services.get(name)!
-    } else {
-      const service = new Service(this.socket, name)
-      this.services.set(name, service)
-
-      return service
     }
   }
 }

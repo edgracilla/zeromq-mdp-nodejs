@@ -10,3 +10,8 @@ export enum Message {
   HEARTBEAT = '\x04',
   DISCONNECT = '\x05',
 }
+
+export enum WorkerResponse {
+  RESP_OK = '0',
+  ERR_ZERO_WORKER = '1'
+}

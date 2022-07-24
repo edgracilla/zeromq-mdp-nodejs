@@ -9,7 +9,7 @@ const main = async () => {
   const resp = await client.sendRcv('svc1', 'createFn', 'aa', 'bb', 'cc')
 
   if (resp) {
-    console.log({ resp })
+    console.log(resp)
   }
 }
 

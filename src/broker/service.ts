@@ -1,15 +1,12 @@
 import logger from '../logger'
+import ServiceWorker from './service-worker'
 
 import { Router } from 'zeromq'
-import { Header, Message } from '../types'
+import { Header, Message, WorkerResponse } from '../types'
 
 const { REQUEST } = Message
 const { CLIENT, WORKER } = Header
-
-interface IWorkerStruct {
-  id: Buffer
-  liveness: number
-}
+const { RESP_OK, ERR_ZERO_WORKER } = WorkerResponse
 
 interface IServiceOptions {
   heartbeatLiveness?: number
@@ -19,87 +16,127 @@ interface IServiceOptions {
 class Service {
   name: string
   socket: Router
+  options: IServiceOptions
 
-  interval: number
-  liveness: number
+  occupied: Set<string> = new Set()
+  unoccupied: Set<string> = new Set()
 
-  workers: Map<string, IWorkerStruct> = new Map()
   requests: Array<[Buffer, Buffer[]]> = []
+  svcWorkers: Map<string, ServiceWorker> = new Map()
 
-  constructor(socket: Router, name: string, opts: IServiceOptions = {}) {
+  constructor (socket: Router, name: string, options: IServiceOptions = {}) {
     this.name = name
     this.socket = socket
-
-    this.liveness = opts.heartbeatLiveness || 3
-    this.interval = opts.heartbeatInterval || 3000
+    this.options = options
   }
 
   addWorker(worker: Buffer) {
     const wStrId = worker.toString('hex')
+    const sWorker = this.svcWorkers.get(wStrId)!
 
-    const wStruct: IWorkerStruct = {
-      liveness: 3,
-      id: worker,
+    if (sWorker) {
+      // paranoia, this might happen?
+      logger.warn(`Adding worker that is already exist! ${wStrId}`)
+
+      // if this happens, do not recreate SW as it
+      // resets beater and might halt running operations
+    } else {
+      const nWorker = new ServiceWorker(worker, this.options)
+
+      nWorker.on('destroy', this.removeWorker.bind(this))
+
+      this.svcWorkers.set(wStrId, nWorker)
+      this.unoccupied.add(wStrId)
+
+      this.logInfo(`worker add: ${wStrId} (${this.occupied.size}/${this.svcWorkers.size})`)
     }
 
-    this.logInfo(`addWorker: ${wStrId} (${this.workers.size + 1})`)
-    this.workers.set(wStrId, wStruct)
-
     this.consumeRequests()
   }
 
-  removeWorker(worker: Buffer) {
-    const wStrId = worker.toString('hex')
+  removeWorker(wStrId: string) {
+    const sWorker = this.svcWorkers.get(wStrId)!
 
-    this.logInfo(`rmvWorker: ${wStrId}`)
-    this.workers.delete(wStrId)
-    this.consumeRequests()
-  }
-
-  dispatchRequest(client: Buffer, ...req: Buffer[]) {
-    this.requests.push([client, req])
-    this.consumeRequests()
-  }
-
-  async dispatchReply(worker: Buffer, client: Buffer, rep: Buffer) {
-    const wStrId = worker.toString('hex')
-    const cStrId = client.toString('hex')
-
-    const wStruct: IWorkerStruct = {
-      liveness: 3,
-      id: worker,
+    if (sWorker) {
+      sWorker.clearBeater()
     }
 
-    this.logInfo(`dispatch: ${cStrId}.req <- ${wStrId}.rep`)
+    const deleted = this.svcWorkers.delete(wStrId)
 
-    this.workers.set(wStrId, wStruct)
-    await this.socket.send([client, null, CLIENT, this.name, rep])
+    if (deleted) {
+      this.occupied.delete(wStrId)
+      this.unoccupied.delete(wStrId)
+    } else {
+      // TODO: handle occupied worker deletion
+      // wait till worker process done? or force delete?
+      console.log('--rmv')
+    }
+
+    this.logInfo(`worker rmv: ${wStrId} (${this.occupied.size}/${this.svcWorkers.size})`)
 
     this.consumeRequests()
+  }
+
+  dispatchClientRequest(client: Buffer, ...req: Buffer[]) {
+    if (this.svcWorkers.size) {
+      this.requests.push([client, req])
+      this.consumeRequests()
+    } else {
+      this.logWarn(`zero worker! [${this.occupied.size}/${this.unoccupied.size}]`)
+      this.socket.send([client, null, CLIENT, this.name, ERR_ZERO_WORKER, 'Zero worker!'])
+    }
   }
 
   async consumeRequests() {
-    while (this.workers.size && this.requests.length) {
-      const [key, wStruct] = this.workers.entries().next().value!
+    while (this.svcWorkers.size && this.requests.length) {
+      const [key, wStrId] = this.unoccupied.entries().next().value!
       const [client, req] = this.requests.shift()!
       
-      this.workers.delete(key)
+      this.occupied.add(wStrId)
+      this.unoccupied.delete(wStrId)
       
       const [fn] = req
-      const wStrId = wStruct.id.toString('hex')
       const cStrId = client.toString('hex')
+      const sWorker = this.svcWorkers.get(wStrId)!
 
-      this.logInfo(`consumes: ${cStrId}.req -> ${wStrId}.${fn}`)
-      await this.socket.send([wStruct.id, null, WORKER, REQUEST, client, null, ...req])
+      this.logInfo(`cascades: ${cStrId}.req -> ${wStrId}.${fn}`)
+      await this.socket.send([sWorker.wId, null, WORKER, REQUEST, client, null, ...req])
     }
+  }
+
+  async dispatchWorkerReply(worker: Buffer, client: Buffer, rep: Buffer) {
+    const wStrId = worker.toString('hex')
+    const cStrId = client.toString('hex')
+
+    this.logInfo(`dispatch: ${cStrId}.req <- ${wStrId}.rep`)
+
+    if (this.occupied.has(wStrId)) {
+      // await this.socket.send([client, null, CLIENT, this.name, rep])
+      await this.socket.send([client, null, CLIENT, this.name, RESP_OK, rep])
+
+      this.unoccupied.add(wStrId)
+      this.occupied.delete(wStrId)
+    }
+
+    this.consumeRequests()
   }
 
   logInfo (log: string) {
     logger.info(`[${this.name}] ${log}`)
   }
 
-  resetLiveness (worker: Buffer) {
+  logWarn (log: string) {
+    logger.warn(`[${this.name}] ${log}`)
+  }
 
+  resetWorkerLiveness (wStrId: string) {
+    const sWorker = this.svcWorkers.get(wStrId)!
+
+    if (!sWorker) {
+      return logger.warn(`Unable to reset liveness! missing worker ${wStrId}`)
+    }
+
+    sWorker.resetLiveness()
   }
 }
 

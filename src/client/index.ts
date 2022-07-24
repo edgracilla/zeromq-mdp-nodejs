@@ -38,16 +38,18 @@ class Client {
 
     while (tries < this.retry) {
       try {
-        const [,, resp] = await this.socket.receive()
+        const [header, service, status, resp] = await this.socket.receive()
+        console.log('--a', header.toString(), service.toString(), status.toString(), resp.toString())
         return resp.toString()
       } catch (err) {
+        console.log(err)
         logger.warn(`Timeout: calling service '${service}' x${tries+1} (${this.timeout / 1000}s)`)
       }
 
       tries++
     }
     
-    logger.error(`REQ failed: ${this.retry} retries consumed`)
+    logger.error(`Client REQ failed: ${this.retry} retries consumed`)
   }
     
 }
