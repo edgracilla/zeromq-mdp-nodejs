@@ -1,10 +1,12 @@
 import { Worker } from './index'
 
-const worker = new Worker({
-  group: 'svc1',
-  address: 'tcp://127.0.0.1:4000',
-  hearbeat: 3000
-});
+
+
+const serviceName = 'svc1'
+const address = 'tcp://127.0.0.1:4000'
+const conf = { heartbeatLiveness: 3, heartbeatInterval: 5000 }
+
+const worker = new Worker(serviceName, address, conf);
 
 // --
 

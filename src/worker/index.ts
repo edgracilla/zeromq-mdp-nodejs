@@ -4,13 +4,11 @@ import { Dealer } from 'zeromq'
 import { Header, Message } from '../types'
 
 const { WORKER } = Header
-const { READY, REPLY, DISCONNECT, HEARTBEAT } = Message
+const { READY, REPLY, DISCONNECT, HEARTBEAT, REQUEST } = Message
 
-interface WorkerOption {
-  group: string,
-  address: string,
-  hearbeat?: number
-  retry?: number
+interface IWorkerOption {
+  heartbeatInterval?: number
+  heartbeatLiveness?: number
 }
 
 class Worker {
@@ -18,20 +16,21 @@ class Worker {
   socket: Dealer
   address: string
 
-  hearbeat: number
   beater: any
+  liveness: number
+  heartbeatLiveness: number
+  heartbeatInterval: number
 
   actions: Map<string, Function> = new Map()
 
-  constructor (option: WorkerOption) {
-    const { group, address, hearbeat } = option
-
+  constructor (group: string, address: string, opts: IWorkerOption = {}) {
     this.group = group
     this.address = address
-    this.hearbeat = hearbeat || 3000
 
+    this.heartbeatInterval = opts.heartbeatInterval || 3000
+    this.liveness = this.heartbeatLiveness = opts.heartbeatLiveness || 3
+    
     this.socket = new Dealer()
-    this.socket.connect(address)
   }
 
   async start () {
@@ -39,29 +38,50 @@ class Worker {
       throw new Error('Atleast one (1) worker action is required.')
     }
 
-    logger.info(`Started worker for service '${this.group}'`)
+    this.socket = new Dealer({ linger: 1})
+    this.liveness = this.heartbeatLiveness
+
+    await this.socket.connect(this.address)
     await this.socket.send([null, WORKER, READY, this.group])
 
-    this.beater = setInterval(this.heartPump.bind(this), this.hearbeat)
+    this.beater = setInterval(this.heartbeat.bind(this), this.heartbeatInterval)
 
-    const loop = async () => {
-      for await (const [, header, type, client,, ...req] of this.socket) {
-        const rep = await this.process(client, ...req)
+    logger.info(`[${this.group}] worker started. ls(${this.heartbeatLiveness})`)
 
-        try {
-          await this.socket.send([null, WORKER, REPLY, client, null, rep])
-        } catch (err) {
-          console.log(err)
-          console.error(`unable to send reply for ${this.address}`)
-        }
+    for await (const [, header, type, client,, ...req] of this.socket) {
+      console.log('--wh', header.toString())
+
+      this.liveness = this.heartbeatLiveness
+      const rep = await this.process(client, ...req)
+
+      try {
+        await this.socket.send([null, WORKER, REPLY, client, null, rep])
+      } catch (err) {
+        console.log(err)
+        console.error(`unable to send reply for ${this.address}`)
       }
     }
+  }
 
-    loop()
+  async heartbeat () {
+    if (this.liveness > 0) {
+      console.log('-- ls', this.liveness)
+      this.liveness--
+      await this.socket.send([null, WORKER, HEARTBEAT])
+    } else {
+      console.log('-- Reconnecting', this.liveness)
+      if (this.beater) {
+        clearInterval(this.beater)
+      }
+
+      this.socket.close()
+
+      await this.start()
+    }
   }
 
   async stop() {
-    logger.info(`Worker stopped for service '${this.group}'`)
+    logger.info(`[${this.group}] worker closed.`)
 
     if (this.beater) {
       clearInterval(this.beater)
@@ -78,22 +98,18 @@ class Worker {
   }
 
   async process(client: Buffer, ...req: Buffer[]) {
-    const [svc, fn, ...parans] = req
+    const [fn, ...parans] = req
 
     const strFn = fn.toString()
     const strClient = client.toString('hex')
     const action = this.actions.get(strFn)!
 
     if (!action) {
-      logger.warn(`${svc}.${fn}() not found.`)
+      logger.warn(`${this.group}.${fn}() not found.`)
     } else {
-      logger.info(`Processing ${svc}.${fn}() -> ${strClient}`)
+      logger.info(`Processing ${this.group}.${fn}() -> ${strClient}`)
       return await action(...parans)
     }
-  }
-
-  async heartPump () {
-    await this.socket.send([null, WORKER, HEARTBEAT])
   }
 }
 

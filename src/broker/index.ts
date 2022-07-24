@@ -11,8 +11,8 @@ class Broker {
   socket: Router
   address: string
 
-  workers: Map<string, Buffer> = new Map()
   services: Map<string, Service> = new Map()
+  svcWorkerIndex: Map<string, string> = new Map()
 
   constructor (address: string) {
     this.address = address
@@ -27,7 +27,7 @@ class Broker {
     logger.info(`Listening on ${this.address}`)
     await this.socket.bind(this.address)
 
-    for await (const [sender,, header, ...rest] of this.socket) {
+    for await (const [sender, blank, header, ...rest] of this.socket) {
       switch (header.toString()) {
         case CLIENT: this.handleClient(sender, ...rest); break
         case WORKER: this.handleWorker(sender, ...rest); break
@@ -36,32 +36,39 @@ class Broker {
   }
 
   handleWorker(worker: Buffer, type?: Buffer, ...rest: Buffer[]) {
-    switch (type && type.toString()) {
-      case READY: {
-        const [service] = rest
-        const strWorker = worker.toString('hex')
+    const wStrId = worker.toString('hex')
+    const msgType = type && type.toString()
+    const mightWorkerExist = msgType !== READY
 
-        this.workers.set(strWorker, service)
-        this.getService(service).addWorker(worker)
+    const svcName = mightWorkerExist
+      ? this.svcWorkerIndex.get(wStrId)!
+      : rest[0].toString()
+
+    const service = this.getService(svcName)
+
+    if (!svcName) return logger.warn(`Worker ${wStrId} not in worker/service index.`)
+    if (!service) return logger.warn(`Service '${svcName}' not found.`)
+
+    switch (msgType) {
+      case READY: {
+        service.addWorker(worker)
+        this.svcWorkerIndex.set(wStrId, svcName)
         break
       }
 
       case REPLY: {
         const [client,, rep] = rest
-        const service = this.getWorkerService(worker)
-
-        if (service) this.getService(service).dispatchReply(worker, client, rep)
+        service.dispatchReply(worker, client, rep)
         break
       }
 
       case HEARTBEAT:
-        /* Heartbeats not implemented yet. */
-        logger.info(rest.toString())
+        logger.info(`HB ${wStrId}`)
+        service.resetLiveness(worker)
         break
 
       case DISCONNECT: {
-        const service = this.getWorkerService(worker)
-        if (service) this.getService(service).removeWorker(worker)
+        service.removeWorker(worker)
         break
       }
 
@@ -71,31 +78,34 @@ class Broker {
     }
   }
 
-  handleClient(client: Buffer, service?: Buffer, ...req: Buffer[]) {
-    const [fn] = req
+  handleClient(client: Buffer, serviceBuf?: Buffer, ...req: Buffer[]) {
+    const svcName = serviceBuf?.toString()
+    const cStrId = client.toString('hex')
+    const fn = req[0].toString()
 
-    logger.info(`[${CLIENT}] ${client.toString('hex')} -> ${service?.toString()}.${fn}()`)
-
-    if (service) {
-      this.getService(service).dispatchRequest(client, service, ...req)
+    if (!svcName) {
+      return logger.warn(`[${CLIENT}] ${cStrId}.req -> empty service`)
     }
+  
+    logger.info(`[${CLIENT}] ${cStrId}.req -> ${svcName}.${fn}`)
+    const service = this.getService(svcName)
+
+    if (!service) {
+      return logger.warn(`[${CLIENT}] ${cStrId}.req -> service not found!`)
+    }
+
+    service.dispatchRequest(client, ...req)
   }
 
-  getService(name: Buffer): Service {
-    const key = name.toString()
-
-    if (this.services.has(key)) {
-      return this.services.get(key)!
+  getService(name: string): Service {
+    if (this.services.has(name)) {
+      return this.services.get(name)!
     } else {
-      const service = new Service(this.socket, key)
-      this.services.set(key, service)
+      const service = new Service(this.socket, name)
+      this.services.set(name, service)
 
       return service
     }
-  }
-
-  getWorkerService(worker: Buffer): Buffer {
-    return this.workers.get(worker.toString('hex'))!
   }
 }
 
