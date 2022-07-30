@@ -42,14 +42,14 @@ main()
 
 // -- app exit handler
 
-// const sigFn: { [key: string ] : any } = {}
-// const SIGNALS = ['SIGHUP', 'SIGINT', 'SIGTERM'] as const
+const sigFn: { [key: string ] : any } = {}
+const SIGNALS = ['SIGHUP', 'SIGINT', 'SIGTERM'] as const
 
-// SIGNALS.map(signal => {
-//   sigFn[signal] = async () => {
-//     await worker.stop()
-//     process.removeListener(signal, sigFn[signal])
-//   }
+SIGNALS.map(signal => {
+  sigFn[signal] = async () => {
+    await worker.stop()
+    process.removeListener(signal, sigFn[signal])
+  }
 
-//   process.on(signal, sigFn[signal])
-// })
+  process.on(signal, sigFn[signal])
+})

@@ -50,22 +50,38 @@ class Worker {
 
     for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
       this.liveness = this.heartbeatLiveness
-      const rep = await this.process(client, ...req)
 
-      console.log('--wh', header.toString(), rep)
+      // console.log('--wh', header.toString())
 
-      try {
-        await this.socket.send([null, WORKER, REPLY, client, null, rep])
-      } catch (err) {
-        console.log(err)
-        console.error(`unable to send reply for ${this.address}`)
+      switch (type.toString()) {
+        case REQUEST:
+          // console.log('-- REQUEST')
+          const rep = await this.process(client, ...req)
+
+          try {
+            await this.socket.send([null, WORKER, REPLY, client, null, rep])
+          } catch (err) {
+            console.log(err)
+            console.error(`unable to send reply for ${this.address}`)
+          }
+          break;
+
+        case HEARTBEAT:
+          // console.log('-- BROKER HEARTBEAT')
+          break;
+
+        case DISCONNECT:
+          console.log('-- DISCONNECT')
+          break;
+        
+        default:
+          console.log('-- default!')
       }
     }
   }
 
   async heartbeat () {
     if (this.liveness > 0) {
-      console.log('-- ls', this.liveness)
       this.liveness--
       await this.socket.send([null, WORKER, HEARTBEAT])
     } else {

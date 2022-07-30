@@ -41,7 +41,7 @@ class Service {
       // if this happens, do not recreate SW as it
       // resets beater and might halt running operations
     } else {
-      const nWorker = new ServiceWorker(worker, this.options)
+      const nWorker = new ServiceWorker(this.name, this.socket, worker, this.options)
 
       nWorker.on('destroy', this.removeWorker.bind(this))
 
@@ -51,7 +51,7 @@ class Service {
       this.logInfo(`worker add: ${wStrId} (${this.occupied.size}/${this.svcWorkers.size})`)
     }
 
-    this.consumeRequests()
+    this.consumeRequests('ADW')
   }
 
   removeWorker(wStrId: string) {
@@ -74,20 +74,20 @@ class Service {
 
     this.logInfo(`worker rmv: ${wStrId} (${this.occupied.size}/${this.svcWorkers.size})`)
 
-    this.consumeRequests()
+    this.consumeRequests('RMW')
   }
 
   dispatchClientRequest(client: Buffer, ...req: Buffer[]) {
-    if (this.svcWorkers.size) {
+    if (this.svcWorkers.size && this.unoccupied.size) {
       this.requests.push([client, req])
-      this.consumeRequests()
+      this.consumeRequests('DCR')
     } else {
       this.logWarn(`zero worker! [${this.occupied.size}/${this.unoccupied.size}]`)
       this.socket.send([client, null, CLIENT, this.name, ERR_ZERO_WORKER, 'Zero worker!'])
     }
   }
 
-  async consumeRequests() {
+  async consumeRequests(origin: string) {
     while (this.svcWorkers.size && this.requests.length) {
       const [key, wStrId] = this.unoccupied.entries().next().value!
       const [client, req] = this.requests.shift()!
@@ -95,30 +95,23 @@ class Service {
       this.occupied.add(wStrId)
       this.unoccupied.delete(wStrId)
       
-      const [fn] = req
-      const cStrId = client.toString('hex')
       const sWorker = this.svcWorkers.get(wStrId)!
-
-      this.logInfo(`cascades: ${cStrId}.req -> ${wStrId}.${fn}`)
-      await this.socket.send([sWorker.wId, null, WORKER, REQUEST, client, null, ...req])
+      await sWorker.cascadeRequest(origin, client, ...req);
     }
   }
 
   async dispatchWorkerReply(worker: Buffer, client: Buffer, rep: Buffer) {
     const wStrId = worker.toString('hex')
-    const cStrId = client.toString('hex')
-
-    this.logInfo(`dispatch: ${cStrId}.req <- ${wStrId}.rep`)
 
     if (this.occupied.has(wStrId)) {
-      // await this.socket.send([client, null, CLIENT, this.name, rep])
-      await this.socket.send([client, null, CLIENT, this.name, RESP_OK, rep])
+      const sWorker = this.svcWorkers.get(wStrId)!
+      await sWorker.dispatchReply(client, rep)
 
       this.unoccupied.add(wStrId)
       this.occupied.delete(wStrId)
     }
 
-    this.consumeRequests()
+    this.consumeRequests('DWR')
   }
 
   logInfo (log: string) {

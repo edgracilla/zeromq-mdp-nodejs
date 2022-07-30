@@ -46,7 +46,7 @@ class Broker {
     if (!svcName) return logger.warn(`[${CLIENT}] ${cStrId}.req -> empty service name!`)
     if (!service) return logger.warn(`[${CLIENT}] ${cStrId}.req -> '${svcName}' no worker yet`)
 
-    logger.info(`[${CLIENT}] ${cStrId}.req -> ${svcName}.${fn}`)
+    // logger.info(`[${CLIENT}] ${cStrId}.req -> ${svcName}.${fn}`)
     service.dispatchClientRequest(client, ...req)
   }
 
@@ -88,7 +88,7 @@ class Broker {
       }
 
       case HEARTBEAT:
-        logger.info(`HB ${wStrId}`)
+        // logger.info(`HB ${wStrId}`)
         service.resetWorkerLiveness(wStrId)
         break
 
