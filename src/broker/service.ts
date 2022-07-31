@@ -7,6 +7,7 @@ import { Header, Message, WorkerResponse } from '../types'
 const { CLIENT } = Header
 
 export interface IServiceOptions {
+  verbose?: number
   heartbeatLiveness?: number
   heartbeatInterval?: number
   workerRequestTimeout?: number
@@ -15,6 +16,7 @@ export interface IServiceOptions {
 class Service {
   name: string
   socket: Router
+  verbose: number
   options: IServiceOptions
 
   requests: Array<[Buffer, Buffer[]]> = []
@@ -25,6 +27,8 @@ class Service {
     this.name = name
     this.socket = socket
     this.options = options
+
+    this.verbose = options.verbose === undefined ? 1 : options.verbose
   }
 
   addWorker(worker: Buffer) {
@@ -43,7 +47,10 @@ class Service {
       this.svcWorkers.set(wStrId, nWorker)
       this.unoccupied.add(wStrId)
 
-      this.logInfo(`worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+      if (this.verbose > 0) {
+        logger.info(`[${this.name}] worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+      }
+      
       this.consumeRequests('ADW')
     }
   }
@@ -70,13 +77,17 @@ class Service {
       logger.error('-- svc worker rmv failed!')
     }
 
-    this.logInfo(`worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+    if (this.verbose > 0) {
+      logger.info(`[${this.name}] worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+    }
 
     this.consumeRequests('RMW')
   }
 
   dispatchClientRequest(client: Buffer, ...req: Buffer[]) {
-    // logger.info(`[${CLIENT}] ${client.toString('hex')}.req -> ${this.name}.${req[0].toString()}()`)
+    if (this.verbose > 2) {
+      logger.info(`[${CLIENT}] ${client.toString('hex')}.req -> ${this.name}.${req[0].toString()}()`)
+    }
 
     this.requests.push([client, req])
     this.consumeRequests('DCR')
@@ -102,10 +113,6 @@ class Service {
 
     this.unoccupied.add(wStrId)
     this.consumeRequests('DWR')
-  }
-
-  logInfo (log: string) {
-    logger.info(`[${this.name}] ${log}`)
   }
 
   resetWorkerLiveness (wStrId: string) {

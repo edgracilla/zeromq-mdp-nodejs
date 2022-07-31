@@ -13,9 +13,10 @@ const routerConfig = {
 }
 
 const svcConf: IServiceOptions = {
+  verbose: 3,
   heartbeatLiveness: 3,
   heartbeatInterval: 3000,
-  workerRequestTimeout: 5000
+  workerRequestTimeout: 5000,
 }
 
 class Broker {
