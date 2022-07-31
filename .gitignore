@@ -35,5 +35,5 @@ typings/
 .env
 .env.test
 
-build
+# build
 config/
