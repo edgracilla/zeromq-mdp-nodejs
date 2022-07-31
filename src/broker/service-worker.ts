@@ -1,18 +1,11 @@
 import logger from '../logger'
 import { Router } from 'zeromq'
 import EventEmitter from 'events'
-import { Header, Message, WorkerResponse } from '../types'
+import { Header, Message, WorkerResponse, IOptions } from '../types'
 
 const { WORKER, CLIENT } = Header
 const { HEARTBEAT, REQUEST } = Message
 const { RESP_OK } = WorkerResponse
-
-interface IServiceOptions {
-  verbose?: number
-  heartbeatLiveness?: number
-  heartbeatInterval?: number
-  workerRequestTimeout?: number
-}
 
 class ServiceWorker extends EventEmitter {
   wId: Buffer
@@ -30,7 +23,7 @@ class ServiceWorker extends EventEmitter {
   beater: ReturnType<typeof setInterval>
   request: Array<[Buffer, Buffer[]]> = []
 
-  constructor (svcName: string, socket: Router, wId: Buffer, options: IServiceOptions) {
+  constructor (svcName: string, socket: Router, wId: Buffer, options: IOptions) {
     super()
 
     this.wId = wId
@@ -67,7 +60,7 @@ class ServiceWorker extends EventEmitter {
       logger.info(`[${this.seq}] ${this.svcName} disp: ${cStrId}.req <- ${this.wStrId}.rep`)
     }
 
-    await this.socket.send([client, null, CLIENT, this.svcName, RESP_OK, rep])
+    await this.socket.send([client, null, CLIENT, this.svcName, rep])
 
     this.request.shift()
     this.seq = ''

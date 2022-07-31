@@ -2,28 +2,21 @@ import logger from '../logger'
 import ServiceWorker from './service-worker'
 
 import { Router } from 'zeromq'
-import { Header, Message, WorkerResponse } from '../types'
+import { Header, IOptions } from '../types'
 
 const { CLIENT } = Header
-
-export interface IServiceOptions {
-  verbose?: number
-  heartbeatLiveness?: number
-  heartbeatInterval?: number
-  workerRequestTimeout?: number
-}
 
 class Service {
   name: string
   socket: Router
   verbose: number
-  options: IServiceOptions
+  options: IOptions
 
   requests: Array<[Buffer, Buffer[]]> = []
   svcWorkers: Map<string, ServiceWorker> = new Map()
   unoccupied: Set<string> = new Set()
 
-  constructor (socket: Router, name: string, options: IServiceOptions = {}) {
+  constructor (socket: Router, name: string, options: IOptions = {}) {
     this.name = name
     this.socket = socket
     this.options = options

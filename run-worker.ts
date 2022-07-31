@@ -1,7 +1,5 @@
 import { Worker } from './index'
 
-
-
 const serviceName = 'svc1'
 const address = 'tcp://127.0.0.1:4000'
 const conf = { heartbeatLiveness: 3, heartbeatInterval: 3000 }
@@ -29,27 +27,13 @@ const deleteFn = (...params: any) => {
 // --
 
 const main = async () => {
-  worker.injectAction(createFn)
-  worker.injectAction(readFn)
-  worker.injectAction(updateFn)
-  worker.injectAction(deleteFn)
+  worker.exposeFn(createFn)
+  worker.exposeFn(readFn)
+  worker.exposeFn(updateFn)
+  worker.exposeFn(deleteFn)
 
   await worker.start()
   
 }
 
 main()
-
-// -- app exit handler
-
-const sigFn: { [key: string ] : any } = {}
-const SIGNALS = ['SIGHUP', 'SIGINT', 'SIGTERM'] as const
-
-SIGNALS.map(signal => {
-  sigFn[signal] = async () => {
-    await worker.stop()
-    process.removeListener(signal, sigFn[signal])
-  }
-
-  process.on(signal, sigFn[signal])
-})

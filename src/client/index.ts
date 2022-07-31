@@ -1,6 +1,6 @@
 import logger from '../logger'
 
-import { Request } from 'zeromq'
+import { Request, Context } from 'zeromq'
 import { Header } from '../types'
 
 const { CLIENT } = Header
@@ -22,12 +22,17 @@ class Client {
   constructor (option: ClientOption) {
     const { address, timeout, retry } = option
 
+    const context = new Context({
+      blocky: false
+    })
+
     this.retry = retry || 3
     this.timeout = timeout || 1000 * 10
     this.address = address
 
     this.socket = new Request({
       receiveTimeout: this.timeout,
+      context
     })
 
     this.socket.connect(address)
@@ -37,12 +42,11 @@ class Client {
     await this.socket.send([CLIENT, service, fn, ...params])
 
     try {
-      const [header, service, status, resp] = await this.socket.receive()
-      console.log('--a', header.toString(), service.toString(), status.toString(), resp.toString())
+      const [header, service, resp] = await this.socket.receive()
+      // console.log('--a', header.toString(), service.toString(), resp.toString())
       return resp.toString()
     } catch (err) {
-      console.log(err)
-      logger.warn(`Client REQ failed: calling service '${service}' timedout (${this.timeout / 1000}s)`)
+      logger.error(err)
     }
   }
 

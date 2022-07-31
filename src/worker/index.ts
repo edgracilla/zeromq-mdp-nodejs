@@ -31,6 +31,7 @@ class Worker {
     this.liveness = this.heartbeatLiveness = opts.heartbeatLiveness || 3
     
     this.socket = new Dealer()
+    this.anchorExits()
   }
 
   async start (recon = false) {
@@ -50,36 +51,30 @@ class Worker {
 
     for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
       this.liveness = this.heartbeatLiveness
-
-      // console.log('--wh', header.toString())
       
       switch (type.toString()) {
         case REQUEST:
-          // console.log('-- REQUEST')
-          // setTimeout(async () => {
-            const rep = await this.process(client, ...req)
-
-            try {
-              await this.socket.send([null, WORKER, REPLY, client, null, rep])
-            } catch (err) {
-              console.log(err)
-              console.error(`unable to send reply for ${this.address}`)
-            }
-          // }, 1000 * 5)
-         
+          this.handleClientRequest(client, ...req)
           break;
 
         case HEARTBEAT:
-          // console.log('-- BROKER HEARTBEAT')
           break;
 
-        case DISCONNECT:
-          console.log('-- DISCONNECT')
-          break;
-        
-        default:
-          console.log('-- default!')
+        // case DISCONNECT:
+          // TODO: handle disconnect
+          // break;
       }
+    }
+  }
+
+  async handleClientRequest (client: Buffer, ...req: Buffer[]) {
+    const rep = await this.process(client, ...req)
+
+    try {
+      await this.socket.send([null, WORKER, REPLY, client, null, rep])
+    } catch (err) {
+      console.log(err)
+      console.error(`unable to send reply for ${this.address}`)
     }
   }
 
@@ -110,7 +105,7 @@ class Worker {
     }
   }
 
-  injectAction (action: Function) {
+  exposeFn (action: Function) {
     this.actions.set(action.name, action)
   }
 
@@ -127,6 +122,20 @@ class Worker {
       logger.info(`[${strClient}] ${this.group}.${fn}()`)
       return await action(...parans)
     }
+  }
+
+  anchorExits () {
+    const sigFn: { [key: string ] : any } = {}
+    const SIGNALS = ['SIGHUP', 'SIGINT', 'SIGTERM'] as const
+
+    SIGNALS.map(signal => {
+      sigFn[signal] = async () => {
+        await this.stop()
+        process.removeListener(signal, sigFn[signal])
+      }
+
+      process.on(signal, sigFn[signal])
+    })
   }
 }
 

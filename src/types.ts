@@ -14,5 +14,12 @@ export enum Message {
 export enum WorkerResponse {
   RESP_OK = '0',
   // ERR_ZERO_WORKER = '1',
-  RESP_TIMEOUT = '2'
+  // RESP_TIMEOUT = '2'
+}
+
+export interface IOptions {
+  verbose?: number
+  heartbeatLiveness?: number
+  heartbeatInterval?: number
+  workerRequestTimeout?: number
 }

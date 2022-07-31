@@ -1,8 +1,8 @@
 import logger from '../logger'
 
+import Service from './service'
 import { Router } from 'zeromq'
-import { Header, Message } from '../types'
-import Service, { IServiceOptions } from './service'
+import { Header, Message, IOptions } from '../types'
 
 const { CLIENT, WORKER } = Header
 const { READY, REPLY, DISCONNECT, HEARTBEAT } = Message
@@ -12,22 +12,17 @@ const routerConfig = {
   sendTimeout: 1
 }
 
-const svcConf: IServiceOptions = {
-  verbose: 3,
-  heartbeatLiveness: 3,
-  heartbeatInterval: 3000,
-  workerRequestTimeout: 5000,
-}
-
 class Broker {
   socket: Router
   address: string
+  svcConf: IOptions
 
   services: Map<string, Service> = new Map()
   svcWorkerIndex: Map<string, string> = new Map()
 
-  constructor (address: string) {
+  constructor (address: string, options: IOptions) {
     this.address = address
+    this.svcConf = options
     this.socket = new Router(routerConfig)
   }
   
@@ -54,7 +49,7 @@ class Broker {
     }
 
     if (!this.services.has(svcName)) {
-      this.services.set(svcName, new Service(this.socket, svcName, svcConf))
+      this.services.set(svcName, new Service(this.socket, svcName, this.svcConf))
     }
 
     const service = this.services.get(svcName)!
@@ -73,7 +68,7 @@ class Broker {
       : req[0].toString()
 
     if (!this.services.has(svcName)) {
-      this.services.set(svcName, new Service(this.socket, svcName, svcConf))
+      this.services.set(svcName, new Service(this.socket, svcName, this.svcConf))
     }
 
     const service = this.services.get(svcName)!
@@ -108,10 +103,25 @@ class Broker {
       }
     }
   }
+
+  anchorExits () {
+    const sigFn: { [key: string ] : any } = {}
+    const SIGNALS = ['SIGHUP', 'SIGINT', 'SIGTERM'] as const
+
+    SIGNALS.map(signal => {
+      sigFn[signal] = async () => {
+        await this.socket.close()
+        process.removeListener(signal, sigFn[signal])
+      }
+
+      process.on(signal, sigFn[signal])
+    })
+  }
 }
 
 export default Broker
 
 // zmdp-ms-suite
 // zmdp-ms-suite
-// zmdp-ms-suite
+// zmdp-suite
+// zmdp-suite
