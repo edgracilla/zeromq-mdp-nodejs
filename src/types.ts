@@ -13,6 +13,6 @@ export enum Message {
 
 export enum WorkerResponse {
   RESP_OK = '0',
-  ERR_ZERO_WORKER = '1',
+  // ERR_ZERO_WORKER = '1',
   RESP_TIMEOUT = '2'
 }

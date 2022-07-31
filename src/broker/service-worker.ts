@@ -5,11 +5,12 @@ import { Header, Message, WorkerResponse } from '../types'
 
 const { WORKER, CLIENT } = Header
 const { HEARTBEAT, REQUEST } = Message
-const { RESP_OK, ERR_ZERO_WORKER } = WorkerResponse
+const { RESP_OK } = WorkerResponse
 
 interface IServiceOptions {
   heartbeatLiveness?: number
   heartbeatInterval?: number
+  workerRequestTimeout?: number
 }
 
 class ServiceWorker extends EventEmitter {
@@ -17,9 +18,12 @@ class ServiceWorker extends EventEmitter {
   wStrId: string
   socket: Router
   svcName: string
+  seq: string = ''
 
   liveness: number
   heartbeatLiveness: number
+  workerRequestTimeout: number
+
   beater: ReturnType<typeof setInterval>
   request: Array<[Buffer, Buffer[]]> = []
 
@@ -30,7 +34,9 @@ class ServiceWorker extends EventEmitter {
     this.socket = socket
     this.svcName = svcName
     this.wStrId = wId.toString('hex')
+    
 
+    this.workerRequestTimeout = options.workerRequestTimeout || 5000
     this.liveness = this.heartbeatLiveness = options.heartbeatLiveness || 3
     
     const interval = options.heartbeatInterval || 3000
@@ -42,18 +48,20 @@ class ServiceWorker extends EventEmitter {
     const [fn] = req
 
     this.request.push([client, req])
+    this.seq = (Date.now()).toString(36).substring(4)
 
-    logger.info(`[${this.svcName}] cascades: ${cStrId}.req -> ${this.wStrId}.${fn} (${origin})`)
+    logger.info(`[${this.seq}] ${this.svcName} casc: ${cStrId}.req -> ${this.wStrId}.${fn} (${origin})`)
     await this.socket.send([this.wId, null, WORKER, REQUEST, client, null, ...req])
   }
 
   async dispatchReply (client: Buffer, rep: Buffer) {
     const cStrId = client.toString('hex')
 
-    logger.info(`[${this.svcName}] dispatch: ${cStrId}.req <- ${this.wStrId}.rep`)
+    logger.info(`[${this.seq}] ${this.svcName} disp: ${cStrId}.req <- ${this.wStrId}.rep`)
     await this.socket.send([client, null, CLIENT, this.svcName, RESP_OK, rep])
 
     this.request.shift()
+    this.seq = ''
   }
 
   async heartbeat () {

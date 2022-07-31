@@ -33,7 +33,7 @@ class Worker {
     this.socket = new Dealer()
   }
 
-  async start () {
+  async start (recon = false) {
     if (!this.actions.size) {
       throw new Error('Atleast one (1) worker action is required.')
     }
@@ -46,24 +46,27 @@ class Worker {
 
     this.beater = setInterval(this.heartbeat.bind(this), this.heartbeatInterval)
 
-    logger.info(`[${this.group}] worker started. ls(${this.heartbeatLiveness})`)
+    logger.info(`${recon ? 'Reconnect: ' : ''}[${this.group}] worker started.`)
 
     for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
       this.liveness = this.heartbeatLiveness
 
       // console.log('--wh', header.toString())
-
+      
       switch (type.toString()) {
         case REQUEST:
           // console.log('-- REQUEST')
-          const rep = await this.process(client, ...req)
+          // setTimeout(async () => {
+            const rep = await this.process(client, ...req)
 
-          try {
-            await this.socket.send([null, WORKER, REPLY, client, null, rep])
-          } catch (err) {
-            console.log(err)
-            console.error(`unable to send reply for ${this.address}`)
-          }
+            try {
+              await this.socket.send([null, WORKER, REPLY, client, null, rep])
+            } catch (err) {
+              console.log(err)
+              console.error(`unable to send reply for ${this.address}`)
+            }
+          // }, 1000 * 5)
+         
           break;
 
         case HEARTBEAT:
@@ -85,14 +88,12 @@ class Worker {
       this.liveness--
       await this.socket.send([null, WORKER, HEARTBEAT])
     } else {
-      console.log('-- Reconnecting', this.liveness)
       if (this.beater) {
         clearInterval(this.beater)
       }
 
       this.socket.close()
-
-      await this.start()
+      await this.start(true)
     }
   }
 
@@ -123,7 +124,7 @@ class Worker {
     if (!action) {
       logger.warn(`${this.group}.${fn}() not found.`)
     } else {
-      logger.info(`Processing ${this.group}.${fn}() -> ${strClient}`)
+      logger.info(`[${strClient}] ${this.group}.${fn}()`)
       return await action(...parans)
     }
   }

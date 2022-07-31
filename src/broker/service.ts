@@ -4,13 +4,12 @@ import ServiceWorker from './service-worker'
 import { Router } from 'zeromq'
 import { Header, Message, WorkerResponse } from '../types'
 
-const { REQUEST } = Message
-const { CLIENT, WORKER } = Header
-const { RESP_OK, ERR_ZERO_WORKER } = WorkerResponse
+const { CLIENT } = Header
 
-interface IServiceOptions {
+export interface IServiceOptions {
   heartbeatLiveness?: number
   heartbeatInterval?: number
+  workerRequestTimeout?: number
 }
 
 class Service {
@@ -18,11 +17,9 @@ class Service {
   socket: Router
   options: IServiceOptions
 
-  occupied: Set<string> = new Set()
-  unoccupied: Set<string> = new Set()
-
   requests: Array<[Buffer, Buffer[]]> = []
   svcWorkers: Map<string, ServiceWorker> = new Map()
+  unoccupied: Set<string> = new Set()
 
   constructor (socket: Router, name: string, options: IServiceOptions = {}) {
     this.name = name
@@ -35,11 +32,9 @@ class Service {
     const sWorker = this.svcWorkers.get(wStrId)!
 
     if (sWorker) {
-      // paranoia, this might happen?
-      logger.warn(`Adding worker that is already exist! ${wStrId}`)
-
-      // if this happens, do not recreate SW as it
+      // paranoia, this might happen? if this happens, do not recreate SW as it
       // resets beater and might halt running operations
+      logger.warn(`Adding worker that is already exist! ${wStrId}`)
     } else {
       const nWorker = new ServiceWorker(this.name, this.socket, worker, this.options)
 
@@ -48,53 +43,52 @@ class Service {
       this.svcWorkers.set(wStrId, nWorker)
       this.unoccupied.add(wStrId)
 
-      this.logInfo(`worker add: ${wStrId} (${this.occupied.size}/${this.svcWorkers.size})`)
+      this.logInfo(`worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+      this.consumeRequests('ADW')
     }
-
-    this.consumeRequests('ADW')
   }
 
   removeWorker(wStrId: string) {
     const sWorker = this.svcWorkers.get(wStrId)!
 
     if (sWorker) {
+      if (sWorker.request.length) {
+        const [client, req] = sWorker.request.shift()!
+        this.requests.push([client, req])
+      }
+
       sWorker.clearBeater()
     }
 
     const deleted = this.svcWorkers.delete(wStrId)
 
     if (deleted) {
-      this.occupied.delete(wStrId)
       this.unoccupied.delete(wStrId)
     } else {
       // TODO: handle occupied worker deletion
       // wait till worker process done? or force delete?
-      console.log('--rmv')
+      logger.error('-- svc worker rmv failed!')
     }
 
-    this.logInfo(`worker rmv: ${wStrId} (${this.occupied.size}/${this.svcWorkers.size})`)
+    this.logInfo(`worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
 
     this.consumeRequests('RMW')
   }
 
   dispatchClientRequest(client: Buffer, ...req: Buffer[]) {
-    if (this.svcWorkers.size && this.unoccupied.size) {
-      this.requests.push([client, req])
-      this.consumeRequests('DCR')
-    } else {
-      this.logWarn(`zero worker! [${this.occupied.size}/${this.unoccupied.size}]`)
-      this.socket.send([client, null, CLIENT, this.name, ERR_ZERO_WORKER, 'Zero worker!'])
-    }
+    // logger.info(`[${CLIENT}] ${client.toString('hex')}.req -> ${this.name}.${req[0].toString()}()`)
+
+    this.requests.push([client, req])
+    this.consumeRequests('DCR')
   }
 
   async consumeRequests(origin: string) {
-    while (this.svcWorkers.size && this.requests.length) {
+    while (this.svcWorkers.size && this.requests.length && this.unoccupied.size) {
       const [key, wStrId] = this.unoccupied.entries().next().value!
       const [client, req] = this.requests.shift()!
       
-      this.occupied.add(wStrId)
       this.unoccupied.delete(wStrId)
-      
+
       const sWorker = this.svcWorkers.get(wStrId)!
       await sWorker.cascadeRequest(origin, client, ...req);
     }
@@ -102,24 +96,16 @@ class Service {
 
   async dispatchWorkerReply(worker: Buffer, client: Buffer, rep: Buffer) {
     const wStrId = worker.toString('hex')
+    const sWorker = this.svcWorkers.get(wStrId)!
 
-    if (this.occupied.has(wStrId)) {
-      const sWorker = this.svcWorkers.get(wStrId)!
-      await sWorker.dispatchReply(client, rep)
+    await sWorker.dispatchReply(client, rep)
 
-      this.unoccupied.add(wStrId)
-      this.occupied.delete(wStrId)
-    }
-
+    this.unoccupied.add(wStrId)
     this.consumeRequests('DWR')
   }
 
   logInfo (log: string) {
     logger.info(`[${this.name}] ${log}`)
-  }
-
-  logWarn (log: string) {
-    logger.warn(`[${this.name}] ${log}`)
   }
 
   resetWorkerLiveness (wStrId: string) {

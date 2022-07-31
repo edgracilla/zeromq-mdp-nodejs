@@ -1,11 +1,22 @@
 import logger from '../logger'
-import Service from './service'
 
 import { Router } from 'zeromq'
 import { Header, Message } from '../types'
+import Service, { IServiceOptions } from './service'
 
 const { CLIENT, WORKER } = Header
 const { READY, REPLY, DISCONNECT, HEARTBEAT } = Message
+
+const routerConfig = {
+  sendHighWaterMark: 1,
+  sendTimeout: 1
+}
+
+const svcConf: IServiceOptions = {
+  heartbeatLiveness: 3,
+  heartbeatInterval: 3000,
+  workerRequestTimeout: 5000
+}
 
 class Broker {
   socket: Router
@@ -16,11 +27,7 @@ class Broker {
 
   constructor (address: string) {
     this.address = address
-
-    this.socket = new Router({
-      sendHighWaterMark: 1,
-      sendTimeout: 1
-    })
+    this.socket = new Router(routerConfig)
   }
   
   async listen () {
@@ -40,13 +47,16 @@ class Broker {
     const [serviceBuf, ...req] = rest
 
     const svcName = serviceBuf.toString()
+    
+    if (!svcName) {
+      return logger.error(`[${CLIENT}] ${cStrId}.req -> empty service name!`)
+    }
+
+    if (!this.services.has(svcName)) {
+      this.services.set(svcName, new Service(this.socket, svcName, svcConf))
+    }
+
     const service = this.services.get(svcName)!
-    const fn = req[0].toString()
-
-    if (!svcName) return logger.warn(`[${CLIENT}] ${cStrId}.req -> empty service name!`)
-    if (!service) return logger.warn(`[${CLIENT}] ${cStrId}.req -> '${svcName}' no worker yet`)
-
-    // logger.info(`[${CLIENT}] ${cStrId}.req -> ${svcName}.${fn}`)
     service.dispatchClientRequest(client, ...req)
   }
 
@@ -61,15 +71,11 @@ class Broker {
       ? this.svcWorkerIndex.get(wStrId)!
       : req[0].toString()
 
-    const svcExist = this.services.has(svcName)
-
-    const service = svcExist
-      ? this.services.get(svcName)!
-      : new Service(this.socket, svcName)
-
-    if (!svcExist) {
-      this.services.set(svcName, service)
+    if (!this.services.has(svcName)) {
+      this.services.set(svcName, new Service(this.socket, svcName, svcConf))
     }
+
+    const service = this.services.get(svcName)!
 
     if (!svcName) return logger.warn(`Worker ${wStrId} not in worker/service index.`)
     if (!service) return logger.warn(`Service '${svcName}' not found.`)
@@ -88,7 +94,6 @@ class Broker {
       }
 
       case HEARTBEAT:
-        // logger.info(`HB ${wStrId}`)
         service.resetWorkerLiveness(wStrId)
         break
 

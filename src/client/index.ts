@@ -17,11 +17,13 @@ class Client {
   timeout: number
   retry: number
 
+  request: Array<[string, string, string[]]> = []
+
   constructor (option: ClientOption) {
     const { address, timeout, retry } = option
 
     this.retry = retry || 3
-    this.timeout = timeout || 5000
+    this.timeout = timeout || 1000 * 10
     this.address = address
 
     this.socket = new Request({
@@ -30,8 +32,21 @@ class Client {
 
     this.socket.connect(address)
   }
-  
+
   async sendRcv (service: string, fn: string, ...params: string[]) {
+    await this.socket.send([CLIENT, service, fn, ...params])
+
+    try {
+      const [header, service, status, resp] = await this.socket.receive()
+      console.log('--a', header.toString(), service.toString(), status.toString(), resp.toString())
+      return resp.toString()
+    } catch (err) {
+      console.log(err)
+      logger.warn(`Client REQ failed: calling service '${service}' timedout (${this.timeout / 1000}s)`)
+    }
+  }
+
+  async sendRcv2 (service: string, fn: string, ...params: string[]) {
     let tries = 0
 
     await this.socket.send([CLIENT, service, fn, ...params])
