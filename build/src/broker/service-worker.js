@@ -26,11 +26,11 @@ class ServiceWorker extends events_1.default {
     }
     async cascadeRequest(origin, client, ...req) {
         const cStrId = client.toString('hex');
-        const [fn] = req;
+        const [module, fn] = req;
         this.request.push([client, req]);
         this.seq = (Date.now()).toString(36).substring(4);
         if (this.verbose > 1) {
-            logger_1.default.info(`[${this.seq}] ${this.svcName} casc: ${cStrId}.req -> ${this.wStrId}.${fn} (${origin})`);
+            logger_1.default.info(`[${this.seq}] ${this.svcName} casc: ${cStrId}.req -> ${this.wStrId}.${module}.${fn} (${origin})`);
         }
         await this.socket.send([this.wId, null, WORKER, REQUEST, client, null, ...req]);
     }

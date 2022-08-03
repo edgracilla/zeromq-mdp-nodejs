@@ -7,5 +7,5 @@ const conf = {
     }
 };
 // TODO: disable pretty in prod
-const logger = require('pino')(conf);
+const logger = require('pino')(conf); // require??
 exports.default = logger;

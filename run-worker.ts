@@ -5,7 +5,8 @@ const address = 'tcp://127.0.0.1:4000'
 const conf = { heartbeatLiveness: 3, heartbeatInterval: 3000 }
 
 const worker = new Worker(serviceName, address, conf);
-
+// const ws = new WorkerSquire()
+// const ws = new Squire()
 // --
 
 const createFn = (...params: any) => {

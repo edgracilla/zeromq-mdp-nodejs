@@ -4,7 +4,7 @@ interface IWorkerOption {
     heartbeatInterval?: number;
     heartbeatLiveness?: number;
 }
-declare class Worker {
+export declare class Worker {
     group: string;
     socket: Dealer;
     address: string;
@@ -22,4 +22,4 @@ declare class Worker {
     process(client: Buffer, ...req: Buffer[]): Promise<any>;
     anchorExits(): void;
 }
-export default Worker;
+export {};

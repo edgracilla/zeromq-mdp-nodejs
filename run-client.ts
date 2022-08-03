@@ -13,6 +13,5 @@ const main = async () => {
   }
 }
 
-
 setInterval(main, 1000);
 // main()

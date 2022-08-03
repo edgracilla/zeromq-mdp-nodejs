@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Client = void 0;
 const logger_1 = __importDefault(require("../logger"));
 const zeromq_1 = require("zeromq");
 const types_1 = require("../types");
@@ -23,8 +24,8 @@ class Client {
         });
         this.socket.connect(address);
     }
-    async sendRcv(service, fn, ...params) {
-        await this.socket.send([CLIENT, service, fn, ...params]);
+    async sendRcv(service, module, fn, ...params) {
+        await this.socket.send([CLIENT, service, module, fn, ...params]);
         try {
             const [header, service, resp] = await this.socket.receive();
             // console.log('--a', header.toString(), service.toString(), resp.toString())
@@ -52,4 +53,4 @@ class Client {
         logger_1.default.error(`Client REQ failed: ${this.retry} retries consumed`);
     }
 }
-exports.default = Client;
+exports.Client = Client;

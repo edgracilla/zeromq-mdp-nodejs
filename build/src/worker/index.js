@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Worker = void 0;
 const logger_1 = __importDefault(require("../logger"));
 const zeromq_1 = require("zeromq");
 const types_1 = require("../types");
@@ -80,6 +81,7 @@ class Worker {
     }
     async process(client, ...req) {
         const [fn, ...parans] = req;
+        // TODO: const [module, fn, ...parans] = req
         const strFn = fn.toString();
         const strClient = client.toString('hex');
         const action = this.actions.get(strFn);
@@ -103,4 +105,4 @@ class Worker {
         });
     }
 }
-exports.default = Worker;
+exports.Worker = Worker;

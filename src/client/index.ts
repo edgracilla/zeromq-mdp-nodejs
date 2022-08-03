@@ -11,7 +11,7 @@ interface ClientOption {
   retry?: number
 }
 
-class Client {
+export class Client {
   socket: Request
   address: string
   timeout: number
@@ -38,8 +38,8 @@ class Client {
     this.socket.connect(address)
   }
 
-  async sendRcv (service: string, fn: string, ...params: string[]) {
-    await this.socket.send([CLIENT, service, fn, ...params])
+  async sendRcv (service: string, module: string, fn: string, ...params: string[]) {
+    await this.socket.send([CLIENT, service, module, fn, ...params])
 
     try {
       const [header, service, resp] = await this.socket.receive()
@@ -72,5 +72,3 @@ class Client {
   }
     
 }
-
-export default Client

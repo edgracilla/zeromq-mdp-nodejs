@@ -41,13 +41,13 @@ class ServiceWorker extends EventEmitter {
 
   async cascadeRequest (origin: string, client: Buffer, ...req: Buffer[]) {
     const cStrId = client.toString('hex')
-    const [fn] = req
+    const [module, fn] = req
 
     this.request.push([client, req])
     this.seq = (Date.now()).toString(36).substring(4)
 
     if (this.verbose > 1) {
-      logger.info(`[${this.seq}] ${this.svcName} casc: ${cStrId}.req -> ${this.wStrId}.${fn} (${origin})`)
+      logger.info(`[${this.seq}] ${this.svcName} casc: ${cStrId}.req -> ${this.wStrId}.${module}.${fn} (${origin})`)
     }
 
     await this.socket.send([this.wId, null, WORKER, REQUEST, client, null, ...req])

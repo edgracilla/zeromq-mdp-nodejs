@@ -2,7 +2,7 @@
 import Service from './service';
 import { Router } from 'zeromq';
 import { IOptions } from '../types';
-declare class Broker {
+export declare class Broker {
     socket: Router;
     address: string;
     svcConf: IOptions;
@@ -14,4 +14,3 @@ declare class Broker {
     handleWorker(worker: Buffer, ...rest: Buffer[]): any;
     anchorExits(): void;
 }
-export default Broker;

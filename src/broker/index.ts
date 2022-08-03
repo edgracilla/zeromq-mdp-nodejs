@@ -12,7 +12,7 @@ const routerConfig = {
   sendTimeout: 1
 }
 
-class Broker {
+export class Broker {
   socket: Router
   address: string
   svcConf: IOptions
@@ -118,8 +118,6 @@ class Broker {
     })
   }
 }
-
-export default Broker
 
 // zmdp-ms-suite
 // zmdp-ms-suite

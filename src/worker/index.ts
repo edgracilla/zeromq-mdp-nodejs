@@ -11,7 +11,7 @@ interface IWorkerOption {
   heartbeatLiveness?: number
 }
 
-class Worker {
+export class Worker {
   group: string
   socket: Dealer
   address: string
@@ -111,6 +111,7 @@ class Worker {
 
   async process(client: Buffer, ...req: Buffer[]) {
     const [fn, ...parans] = req
+    // TODO: const [module, fn, ...parans] = req
 
     const strFn = fn.toString()
     const strClient = client.toString('hex')
@@ -138,5 +139,3 @@ class Worker {
     })
   }
 }
-
-export default Worker
