@@ -1,13 +1,13 @@
 {
   "name": "zeromq-mdp-nodejs",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
-  "main": "./build/index.js",
+  "main": "./dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "broker": "npm run build && node ./build/run-broker.js",
-    "client": "npm run build && node ./build/run-client.js",
-    "worker": "npm run build && node ./build/run-worker.js"
+    "broker": "npm run build && node ./dist/run-broker.js",
+    "client": "npm run build && node ./dist/run-client.js",
+    "worker": "npm run build && node ./dist/run-worker.js"
   },
   "repository": {
     "type": "git",

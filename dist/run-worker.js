@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const index_1 = require("./index");
-const serviceName = 'svc1';
+const serviceName = 'tu-identity-api';
 const address = 'tcp://127.0.0.1:4000';
 const conf = { heartbeatLiveness: 3, heartbeatInterval: 3000 };
 const worker = new index_1.Worker(serviceName, address, conf);
@@ -22,10 +22,11 @@ const deleteFn = (...params) => {
 };
 // --
 const main = async () => {
-    worker.exposeFn(createFn);
-    worker.exposeFn(readFn);
-    worker.exposeFn(updateFn);
-    worker.exposeFn(deleteFn);
+    const mod = 'access';
+    worker.exposeFn(mod, createFn);
+    worker.exposeFn(mod, readFn);
+    worker.exposeFn(mod, updateFn);
+    worker.exposeFn(mod, deleteFn);
     await worker.start();
 };
 main();

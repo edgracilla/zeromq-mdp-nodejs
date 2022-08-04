@@ -6,7 +6,7 @@ const client = new index_1.Client({
     timeout: 1000 * 15
 });
 const main = async () => {
-    const resp = await client.sendRcv('svc1', 'createFn', 'aa', 'bb', 'cc');
+    const resp = await client.sendRcv('tu-identity-api', 'access', 'createFn', 'aa', 'bb', 'cc');
     if (resp) {
         console.log(resp);
     }

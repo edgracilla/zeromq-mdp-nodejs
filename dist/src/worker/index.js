@@ -10,10 +10,10 @@ const types_1 = require("../types");
 const { WORKER } = types_1.Header;
 const { READY, REPLY, DISCONNECT, HEARTBEAT, REQUEST } = types_1.Message;
 class Worker {
-    constructor(group, address, opts = {}) {
+    constructor(svcName, address, opts = {}) {
         this.actions = new Map();
-        this.group = group;
         this.address = address;
+        this.svcName = svcName;
         this.heartbeatInterval = opts.heartbeatInterval || 3000;
         this.liveness = this.heartbeatLiveness = opts.heartbeatLiveness || 3;
         this.socket = new zeromq_1.Dealer();
@@ -26,9 +26,9 @@ class Worker {
         this.socket = new zeromq_1.Dealer({ linger: 1 });
         this.liveness = this.heartbeatLiveness;
         await this.socket.connect(this.address);
-        await this.socket.send([null, WORKER, READY, this.group]);
+        await this.socket.send([null, WORKER, READY, this.svcName]);
         this.beater = setInterval(this.heartbeat.bind(this), this.heartbeatInterval);
-        logger_1.default.info(`${recon ? 'Reconnect: ' : ''}[${this.group}] worker started.`);
+        logger_1.default.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP worker started.`);
         for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
             this.liveness = this.heartbeatLiveness;
             switch (type.toString()) {
@@ -67,7 +67,7 @@ class Worker {
         }
     }
     async stop() {
-        logger_1.default.info(`[${this.group}] worker closed.`);
+        logger_1.default.info(`[${this.svcName}] worker closed.`);
         if (this.beater) {
             clearInterval(this.beater);
         }
@@ -76,21 +76,21 @@ class Worker {
             this.socket.close();
         }
     }
-    exposeFn(action) {
-        this.actions.set(action.name, action);
+    exposeFn(module, action) {
+        this.actions.set(`${module}.${action.name}`, action);
     }
     async process(client, ...req) {
-        const [fn, ...parans] = req;
-        // TODO: const [module, fn, ...parans] = req
+        const [module, fn, ...params] = req;
         const strFn = fn.toString();
+        const strModule = module.toString();
         const strClient = client.toString('hex');
-        const action = this.actions.get(strFn);
+        const action = this.actions.get(`${strModule}.${strFn}`);
         if (!action) {
-            logger_1.default.warn(`${this.group}.${fn}() not found.`);
+            logger_1.default.warn(`${this.svcName}.${fn}() not found.`);
         }
         else {
-            logger_1.default.info(`[${strClient}] ${this.group}.${fn}()`);
-            return await action(...parans);
+            logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}(${params.length})`);
+            return await action(...params);
         }
     }
     anchorExits() {

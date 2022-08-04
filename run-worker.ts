@@ -1,6 +1,6 @@
 import { Worker } from './index'
 
-const serviceName = 'svc1'
+const serviceName = 'tu-identity-api'
 const address = 'tcp://127.0.0.1:4000'
 const conf = { heartbeatLiveness: 3, heartbeatInterval: 3000 }
 
@@ -28,10 +28,11 @@ const deleteFn = (...params: any) => {
 // --
 
 const main = async () => {
-  worker.exposeFn(createFn)
-  worker.exposeFn(readFn)
-  worker.exposeFn(updateFn)
-  worker.exposeFn(deleteFn)
+  const mod = 'access'
+  worker.exposeFn(mod, createFn)
+  worker.exposeFn(mod, readFn)
+  worker.exposeFn(mod, updateFn)
+  worker.exposeFn(mod, deleteFn)
 
   await worker.start()
   
