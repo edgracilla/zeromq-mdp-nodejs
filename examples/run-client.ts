@@ -29,6 +29,7 @@ const main = async () => {
   const buf = ReadParams.encode(msg).finish()
 
   const resp = await client.sendRcv('tu-identity-api', 'access', 'readFn', buf)
+
   // const resp = await client.sendRcv('tu-identity-api', 'access', 'testPassSupportedTypes', 'str', '1', 'true', '{"foo":"bar"}')
 
   if (resp) {

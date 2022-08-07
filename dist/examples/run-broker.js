@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const index_1 = require("../index");
 const svcConf = {
-    verbose: 1,
+    verbose: 2,
     heartbeatLiveness: 3,
     heartbeatInterval: 3000,
     workerRequestTimeout: 5000,

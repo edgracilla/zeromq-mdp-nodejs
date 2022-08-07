@@ -1,7 +1,7 @@
 import { Broker } from '../index'
 
 const svcConf = {
-  verbose: 1,
+  verbose: 2,
   heartbeatLiveness: 3,
   heartbeatInterval: 3000,
   workerRequestTimeout: 5000,

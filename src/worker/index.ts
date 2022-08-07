@@ -22,7 +22,7 @@ export class Worker {
   heartbeatLiveness: number
   heartbeatInterval: number
 
-  functions: Map<string, [Function, string[]]> = new Map()
+  actions: Map<string, Function> = new Map()
 
   constructor (svcName: string, address: string, opts: IWorkerOption = {}) {
     this.address = address
@@ -36,7 +36,7 @@ export class Worker {
   }
 
   async start (recon = false) {
-    if (!this.functions.size) {
+    if (!this.actions.size) {
       throw new Error('Atleast one (1) worker action is required.')
     }
 
@@ -106,8 +106,8 @@ export class Worker {
     }
   }
 
-  exposeFn (module: string, action: Function, types: string[]) {
-    this.functions.set(`${module}.${action.name}`, [action, types])
+  exposeFn (module: string, action: Function) {
+    this.actions.set(`${module}.${action.name}`, action)
   }
 
   async process(client: Buffer, ...req: Buffer[]) {
@@ -117,7 +117,7 @@ export class Worker {
     const strModule = module.toString()
 
     const strClient = client.toString('hex')
-    const [action, types] = this.functions.get(`${strModule}.${strFn}`)!
+    const action = this.actions.get(`${strModule}.${strFn}`)!
 
     if (!action) {
       logger.warn(`${this.svcName}.${fn}() not found.`)

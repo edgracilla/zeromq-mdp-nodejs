@@ -26,11 +26,11 @@ const testPassSupportedTypes = (str, num, flag, obj) => {
 // --
 const main = async () => {
     const mod = 'access';
-    worker.exposeFn(mod, createFn, ['object']);
-    worker.exposeFn(mod, readFn, ['string', 'object']);
-    worker.exposeFn(mod, updateFn, ['string', 'object', 'object']);
-    worker.exposeFn(mod, deleteFn, ['string', 'object']);
-    worker.exposeFn(mod, testPassSupportedTypes, ['string', 'number', 'boolean', 'object']);
+    worker.exposeFn(mod, createFn);
+    worker.exposeFn(mod, readFn);
+    worker.exposeFn(mod, updateFn);
+    worker.exposeFn(mod, deleteFn);
+    worker.exposeFn(mod, testPassSupportedTypes);
     await worker.start();
 };
 main();
