@@ -1,0 +1,31 @@
+package samplepkg;
+syntax = "proto3";
+
+message MetaAccess {
+  string _id = 1;
+}
+
+message MetaUser {
+  string _id = 1;
+  string name = 2;
+}
+
+message MetaPerm {
+  bool readOwned = 1;
+}
+
+message Meta {
+  MetaUser _user = 1;
+  MetaPerm _perm = 2;
+  MetaAccess _access = 3;
+}
+
+message CreateFn {
+  string foo = 1;
+  string bar = 2;
+}
+
+message readFn {
+  string _id = 1;
+  Meta meta = 2;
+}

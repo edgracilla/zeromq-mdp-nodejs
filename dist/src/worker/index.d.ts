@@ -12,13 +12,13 @@ export declare class Worker {
     liveness: number;
     heartbeatLiveness: number;
     heartbeatInterval: number;
-    actions: Map<string, Function>;
+    functions: Map<string, [Function, string[]]>;
     constructor(svcName: string, address: string, opts?: IWorkerOption);
     start(recon?: boolean): Promise<void>;
     handleClientRequest(client: Buffer, ...req: Buffer[]): Promise<void>;
     heartbeat(): Promise<void>;
     stop(): Promise<void>;
-    exposeFn(module: string, action: Function): void;
+    exposeFn(module: string, action: Function, types: string[]): void;
     process(client: Buffer, ...req: Buffer[]): Promise<any>;
     anchorExits(): void;
 }

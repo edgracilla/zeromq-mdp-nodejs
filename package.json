@@ -5,9 +5,9 @@
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "broker": "npm run build && node ./dist/run-broker.js",
-    "client": "npm run build && node ./dist/run-client.js",
-    "worker": "npm run build && node ./dist/run-worker.js"
+    "broker": "npm run build && node ./dist/examples/run-broker.js",
+    "client": "npm run build && node ./dist/examples/run-client.js",
+    "worker": "npm run build && node ./dist/examples/run-worker.js"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
   "dependencies": {
     "pino": "^8.3.0",
     "pino-pretty": "^8.1.0",
+    "protobufjs": "^7.0.0",
     "zeromq": "^6.0.0-beta.6"
   },
   "devDependencies": {

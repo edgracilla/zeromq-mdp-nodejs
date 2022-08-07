@@ -1,4 +1,4 @@
-import { Broker } from './index'
+import { Broker } from '../index'
 
 const svcConf = {
   verbose: 1,

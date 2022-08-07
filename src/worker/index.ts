@@ -1,4 +1,5 @@
 import logger from '../logger'
+const protobuf = require('protobufjs')
 
 import { Dealer } from 'zeromq'
 import { Header, Message } from '../types'
@@ -21,7 +22,7 @@ export class Worker {
   heartbeatLiveness: number
   heartbeatInterval: number
 
-  actions: Map<string, Function> = new Map()
+  functions: Map<string, [Function, string[]]> = new Map()
 
   constructor (svcName: string, address: string, opts: IWorkerOption = {}) {
     this.address = address
@@ -35,7 +36,7 @@ export class Worker {
   }
 
   async start (recon = false) {
-    if (!this.actions.size) {
+    if (!this.functions.size) {
       throw new Error('Atleast one (1) worker action is required.')
     }
 
@@ -47,7 +48,7 @@ export class Worker {
 
     this.beater = setInterval(this.heartbeat.bind(this), this.heartbeatInterval)
 
-    logger.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP worker started.`)
+    logger.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP Worker started.`)
 
     for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
       this.liveness = this.heartbeatLiveness
@@ -105,8 +106,8 @@ export class Worker {
     }
   }
 
-  exposeFn (module: string, action: Function) {
-    this.actions.set(`${module}.${action.name}`, action)
+  exposeFn (module: string, action: Function, types: string[]) {
+    this.functions.set(`${module}.${action.name}`, [action, types])
   }
 
   async process(client: Buffer, ...req: Buffer[]) {
@@ -116,13 +117,26 @@ export class Worker {
     const strModule = module.toString()
 
     const strClient = client.toString('hex')
-    const action = this.actions.get(`${strModule}.${strFn}`)!
+    const [action, types] = this.functions.get(`${strModule}.${strFn}`)!
 
     if (!action) {
       logger.warn(`${this.svcName}.${fn}() not found.`)
     } else {
       logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}(${params.length})`)
-      return await action(...params)
+
+      // -- POC only
+      const root = await protobuf.load('test.proto')
+      const Proto = root.lookupType(`samplepkg.${strFn}`)
+      const msg = Proto.decode(params[0])
+      const msgObj = Proto.toObject(msg)
+
+      const map = Object.keys(msgObj).map(key => msgObj[key])
+
+      console.log('--x', msgObj)
+      console.log('--z', map)
+      // --
+
+      return await action(...map)
     }
   }
 

@@ -5,13 +5,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Worker = void 0;
 const logger_1 = __importDefault(require("../logger"));
+const protobuf = require('protobufjs');
 const zeromq_1 = require("zeromq");
 const types_1 = require("../types");
 const { WORKER } = types_1.Header;
 const { READY, REPLY, DISCONNECT, HEARTBEAT, REQUEST } = types_1.Message;
 class Worker {
     constructor(svcName, address, opts = {}) {
-        this.actions = new Map();
+        this.functions = new Map();
         this.address = address;
         this.svcName = svcName;
         this.heartbeatInterval = opts.heartbeatInterval || 3000;
@@ -20,7 +21,7 @@ class Worker {
         this.anchorExits();
     }
     async start(recon = false) {
-        if (!this.actions.size) {
+        if (!this.functions.size) {
             throw new Error('Atleast one (1) worker action is required.');
         }
         this.socket = new zeromq_1.Dealer({ linger: 1 });
@@ -28,7 +29,7 @@ class Worker {
         await this.socket.connect(this.address);
         await this.socket.send([null, WORKER, READY, this.svcName]);
         this.beater = setInterval(this.heartbeat.bind(this), this.heartbeatInterval);
-        logger_1.default.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP worker started.`);
+        logger_1.default.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP Worker started.`);
         for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
             this.liveness = this.heartbeatLiveness;
             switch (type.toString()) {
@@ -76,21 +77,30 @@ class Worker {
             this.socket.close();
         }
     }
-    exposeFn(module, action) {
-        this.actions.set(`${module}.${action.name}`, action);
+    exposeFn(module, action, types) {
+        this.functions.set(`${module}.${action.name}`, [action, types]);
     }
     async process(client, ...req) {
         const [module, fn, ...params] = req;
         const strFn = fn.toString();
         const strModule = module.toString();
         const strClient = client.toString('hex');
-        const action = this.actions.get(`${strModule}.${strFn}`);
+        const [action, types] = this.functions.get(`${strModule}.${strFn}`);
         if (!action) {
             logger_1.default.warn(`${this.svcName}.${fn}() not found.`);
         }
         else {
             logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}(${params.length})`);
-            return await action(...params);
+            // -- POC only
+            const proto = await protobuf.load('test.proto');
+            const ReadParams = proto.lookupType('samplepkg.readFn');
+            const msg = ReadParams.decode(params[0]);
+            const msgObj = ReadParams.toObject(msg);
+            const map = Object.keys(msgObj).map(key => msgObj[key]);
+            console.log('--x', msgObj);
+            console.log('--z', map);
+            // --
+            return await action(...map);
         }
     }
     anchorExits() {

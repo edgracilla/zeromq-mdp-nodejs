@@ -20,12 +20,13 @@ class Client {
         this.address = address;
         this.socket = new zeromq_1.Request({
             receiveTimeout: this.timeout,
+            linger: 1,
             context
         });
         this.socket.connect(address);
     }
-    async sendRcv(service, module, fn, ...params) {
-        await this.socket.send([CLIENT, service, module, fn, ...params]);
+    async sendRcv(service, module, fn, params) {
+        await this.socket.send([CLIENT, service, module, fn, params]);
         try {
             const [header, service, resp] = await this.socket.receive();
             // console.log('--a', header.toString(), service.toString(), resp.toString())

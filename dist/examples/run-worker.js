@@ -1,17 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const index_1 = require("./index");
+const index_1 = require("../index");
 const serviceName = 'tu-identity-api';
 const address = 'tcp://127.0.0.1:4000';
 const conf = { heartbeatLiveness: 3, heartbeatInterval: 3000 };
 const worker = new index_1.Worker(serviceName, address, conf);
-// const ws = new WorkerSquire()
-// const ws = new Squire()
 // --
 const createFn = (obj) => {
     return `createFn: ${typeof obj}`;
 };
 const readFn = (_id, meta) => {
+    console.log('readFn executed!');
     return `readFn: ${typeof _id} ${typeof meta}`;
 };
 const updateFn = (_id, data, meta) => {

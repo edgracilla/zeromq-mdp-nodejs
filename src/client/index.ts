@@ -32,14 +32,15 @@ export class Client {
 
     this.socket = new Request({
       receiveTimeout: this.timeout,
+      linger: 1,
       context
     })
 
     this.socket.connect(address)
   }
 
-  async sendRcv (service: string, module: string, fn: string, ...params: string[]) {
-    await this.socket.send([CLIENT, service, module, fn, ...params])
+  async sendRcv (service: string, module: string, fn: string, params: Buffer) {
+    await this.socket.send([CLIENT, service, module, fn, params])
 
     try {
       const [header, service, resp] = await this.socket.receive()
