@@ -8,6 +8,9 @@ const { WORKER } = Header
 const { READY, REPLY, DISCONNECT, HEARTBEAT, REQUEST } = Message
 
 interface IWorkerOption {
+  service: string
+  address: string
+  protoSrc?: string
   heartbeatInterval?: number
   heartbeatLiveness?: number
 }
@@ -16,6 +19,7 @@ export class Worker {
   socket: Dealer
   address: string
   svcName: string
+  protoSrc: string
 
   beater: any
   liveness: number
@@ -24,12 +28,13 @@ export class Worker {
 
   actions: Map<string, Function> = new Map()
 
-  constructor (svcName: string, address: string, opts: IWorkerOption = {}) {
-    this.address = address
-    this.svcName = svcName
+  constructor (config: IWorkerOption) {
+    this.address = config.address
+    this.svcName = config.service
+    this.protoSrc = config.protoSrc || '.'
 
-    this.heartbeatInterval = opts.heartbeatInterval || 3000
-    this.liveness = this.heartbeatLiveness = opts.heartbeatLiveness || 3
+    this.heartbeatInterval = config.heartbeatInterval || 3000
+    this.liveness = this.heartbeatLiveness = config.heartbeatLiveness || 3
     
     this.socket = new Dealer()
     this.anchorExits()
@@ -125,18 +130,16 @@ export class Worker {
       logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}(${params.length})`)
 
       // -- POC only
-      const root = await protobuf.load('test.proto')
-      const Proto = root.lookupType(`samplepkg.${strFn}`)
+      const root = await protobuf.load(`${this.protoSrc}/${module}.proto`)
+      const Proto = root.lookupType(`${module}.${strFn}`)
       const msg = Proto.decode(params[0])
       const msgObj = Proto.toObject(msg)
 
-      const map = Object.keys(msgObj).map(key => msgObj[key])
-
+      const paramData = Object.keys(msgObj).map(key => msgObj[key])
       console.log('--x', msgObj)
-      console.log('--z', map)
       // --
 
-      return await action(...map)
+      return await action(...paramData)
     }
   }
 

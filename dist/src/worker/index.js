@@ -11,12 +11,13 @@ const types_1 = require("../types");
 const { WORKER } = types_1.Header;
 const { READY, REPLY, DISCONNECT, HEARTBEAT, REQUEST } = types_1.Message;
 class Worker {
-    constructor(svcName, address, opts = {}) {
+    constructor(config) {
         this.actions = new Map();
-        this.address = address;
-        this.svcName = svcName;
-        this.heartbeatInterval = opts.heartbeatInterval || 3000;
-        this.liveness = this.heartbeatLiveness = opts.heartbeatLiveness || 3;
+        this.address = config.address;
+        this.svcName = config.service;
+        this.protoSrc = config.protoSrc || '.';
+        this.heartbeatInterval = config.heartbeatInterval || 3000;
+        this.liveness = this.heartbeatLiveness = config.heartbeatLiveness || 3;
         this.socket = new zeromq_1.Dealer();
         this.anchorExits();
     }
@@ -92,15 +93,14 @@ class Worker {
         else {
             logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}(${params.length})`);
             // -- POC only
-            const root = await protobuf.load('test.proto');
-            const Proto = root.lookupType(`samplepkg.${strFn}`);
+            const root = await protobuf.load(`${this.protoSrc}/${module}.proto`);
+            const Proto = root.lookupType(`${module}.${strFn}`);
             const msg = Proto.decode(params[0]);
             const msgObj = Proto.toObject(msg);
-            const map = Object.keys(msgObj).map(key => msgObj[key]);
+            const paramData = Object.keys(msgObj).map(key => msgObj[key]);
             console.log('--x', msgObj);
-            console.log('--z', map);
             // --
-            return await action(...map);
+            return await action(...paramData);
         }
     }
     anchorExits() {

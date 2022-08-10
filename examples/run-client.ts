@@ -7,8 +7,8 @@ const client = new Client({
 });
 
 const main = async () => {
-  const proto = await protobuf.load('test.proto')
-  const ReadParams = proto.lookupType('samplepkg.readFn')
+  const proto = await protobuf.load('access.proto')
+  const ReadParams = proto.lookupType('access.read')
 
   const payload = {
     _id: 'test',
@@ -28,7 +28,7 @@ const main = async () => {
   const msg = ReadParams.create(payload)
   const buf = ReadParams.encode(msg).finish()
 
-  const resp = await client.sendRcv('tu-identity-api', 'access', 'readFn', buf)
+  const resp = await client.sendRcv('tu-identity-api', 'access', 'read', buf)
 
   // const resp = await client.sendRcv('tu-identity-api', 'access', 'testPassSupportedTypes', 'str', '1', 'true', '{"foo":"bar"}')
 
