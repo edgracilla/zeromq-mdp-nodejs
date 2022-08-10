@@ -112,7 +112,8 @@ export class Worker {
   }
 
   exposeFn (module: string, action: Function) {
-    this.actions.set(`${module}.${action.name}`, action)
+    console.log(`${module}.${action.name.replace(/bound /i, '')}`, action)
+    this.actions.set(`${module}.${action.name.replace(/bound /i, '')}`, action)
   }
 
   async process(client: Buffer, ...req: Buffer[]) {
@@ -127,7 +128,7 @@ export class Worker {
     if (!action) {
       logger.warn(`${this.svcName}.${fn}() not found.`)
     } else {
-      logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}(${params.length})`)
+      logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`)
 
       // -- POC only
       const root = await protobuf.load(`${this.protoSrc}/${module}.proto`)

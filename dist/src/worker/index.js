@@ -79,7 +79,8 @@ class Worker {
         }
     }
     exposeFn(module, action) {
-        this.actions.set(`${module}.${action.name}`, action);
+        console.log(`${module}.${action.name.replace(/bound /i, '')}`, action);
+        this.actions.set(`${module}.${action.name.replace(/bound /i, '')}`, action);
     }
     async process(client, ...req) {
         const [module, fn, ...params] = req;
@@ -91,7 +92,7 @@ class Worker {
             logger_1.default.warn(`${this.svcName}.${fn}() not found.`);
         }
         else {
-            logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}(${params.length})`);
+            logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`);
             // -- POC only
             const root = await protobuf.load(`${this.protoSrc}/${module}.proto`);
             const Proto = root.lookupType(`${module}.${strFn}`);

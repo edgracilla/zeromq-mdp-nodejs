@@ -10,7 +10,7 @@ const main = async () => {
     const proto = await protobuf.load('access.proto');
     const ReadParams = proto.lookupType('access.read');
     const payload = {
-        _id: 'test',
+        _id: 'tester-tester',
         meta: {
             _perm: { readOwned: true },
             _access: { _id: 'accessId' },
