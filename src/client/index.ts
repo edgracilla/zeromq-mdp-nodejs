@@ -44,7 +44,7 @@ export class Client {
 
     try {
       const [header, service, resp] = await this.socket.receive()
-      console.log('--rcvd resp', resp)
+      console.log('--rcvd resp', resp.toString())
       return resp.toString()
     } catch (err) {
       logger.error(err)

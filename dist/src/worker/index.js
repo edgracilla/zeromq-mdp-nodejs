@@ -47,6 +47,7 @@ class Worker {
     }
     async handleClientRequest(client, ...req) {
         const rep = await this.process(client, ...req);
+        console.log('--worker resp', rep);
         try {
             await this.socket.send([null, WORKER, REPLY, client, null, rep]);
         }
@@ -99,7 +100,6 @@ class Worker {
             const msg = Proto.decode(params[0]);
             const msgObj = Proto.toObject(msg);
             const paramData = Object.keys(msgObj).map(key => msgObj[key]);
-            console.log('--x', msgObj);
             // --
             return await action(...paramData);
         }

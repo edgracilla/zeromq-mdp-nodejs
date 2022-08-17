@@ -29,7 +29,7 @@ class Client {
         await this.socket.send([CLIENT, service, module, fn, params]);
         try {
             const [header, service, resp] = await this.socket.receive();
-            console.log('--a', resp);
+            console.log('--rcvd resp', resp.toString());
             return resp.toString();
         }
         catch (err) {
