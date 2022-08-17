@@ -41,7 +41,7 @@ class Service {
       this.unoccupied.add(wStrId)
 
       if (this.verbose > 0) {
-        logger.info(`[${this.name}] worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+        logger.info(`${this.name} worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
       }
       
       this.consumeRequests('ADW')
@@ -71,7 +71,7 @@ class Service {
     }
 
     if (this.verbose > 0) {
-      logger.info(`[${this.name}] worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+      logger.info(`${this.name} worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
     }
 
     this.consumeRequests('RMW')

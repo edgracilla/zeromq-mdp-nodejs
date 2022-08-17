@@ -31,7 +31,7 @@ class Service {
             this.svcWorkers.set(wStrId, nWorker);
             this.unoccupied.add(wStrId);
             if (this.verbose > 0) {
-                logger_1.default.info(`[${this.name}] worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`);
+                logger_1.default.info(`${this.name} worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`);
             }
             this.consumeRequests('ADW');
         }
@@ -55,7 +55,7 @@ class Service {
             logger_1.default.error('-- svc worker rmv failed!');
         }
         if (this.verbose > 0) {
-            logger_1.default.info(`[${this.name}] worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`);
+            logger_1.default.info(`${this.name} worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`);
         }
         this.consumeRequests('RMW');
     }

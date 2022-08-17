@@ -76,6 +76,8 @@ export class Worker {
   async handleClientRequest (client: Buffer, ...req: Buffer[]) {
     const rep = await this.process(client, ...req)
 
+    console.log('--worker resp', rep)
+
     try {
       await this.socket.send([null, WORKER, REPLY, client, null, rep])
     } catch (err) {
@@ -137,7 +139,6 @@ export class Worker {
       const msgObj = Proto.toObject(msg)
 
       const paramData = Object.keys(msgObj).map(key => msgObj[key])
-      console.log('--x', msgObj)
       // --
 
       return await action(...paramData)

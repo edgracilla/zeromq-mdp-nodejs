@@ -12,7 +12,7 @@ const main = async () => {
     const payload = {
         _id: 'tester-tester',
         meta: {
-            _perm: { readOwned: true },
+            _perm: { readOwned: false },
             _access: { _id: 'accessId' },
             _user: { _id: 'userId', name: 'userName' },
         }
@@ -25,9 +25,7 @@ const main = async () => {
     const buf = ReadParams.encode(msg).finish();
     const resp = await client.sendRcv('tu-identity-api', 'access', 'read', buf);
     // const resp = await client.sendRcv('tu-identity-api', 'access', 'testPassSupportedTypes', 'str', '1', 'true', '{"foo":"bar"}')
-    if (resp) {
-        console.log(resp);
-    }
+    console.log(JSON.stringify(resp));
 };
 // setInterval(main, 1000);
 main();

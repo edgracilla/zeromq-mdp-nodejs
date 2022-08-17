@@ -13,7 +13,7 @@ const main = async () => {
   const payload = {
     _id: 'tester-tester',
     meta: {
-      _perm: { readOwned: true },
+      _perm: { readOwned: false },
       _access: { _id: 'accessId' },
       _user: { _id: 'userId', name: 'userName' },
     }
@@ -32,9 +32,7 @@ const main = async () => {
 
   // const resp = await client.sendRcv('tu-identity-api', 'access', 'testPassSupportedTypes', 'str', '1', 'true', '{"foo":"bar"}')
 
-  if (resp) {
-    console.log(resp)
-  }
+  console.log(resp)
 }
 
 // setInterval(main, 1000);
