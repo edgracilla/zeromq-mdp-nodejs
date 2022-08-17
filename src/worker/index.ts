@@ -1,5 +1,4 @@
 import logger from '../logger'
-const protobuf = require('protobufjs')
 
 import { Dealer } from 'zeromq'
 import { Header, Message } from '../types'
@@ -27,6 +26,8 @@ export class Worker {
   heartbeatInterval: number
 
   _paramDecoder: Function = async () => {}
+  _resultEncoder: Function = async () => {}
+
   actions: Map<string, Function> = new Map()
 
   constructor (config: IWorkerOption) {
@@ -133,24 +134,10 @@ export class Worker {
     } else {
       logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`)
 
-      // const root = await protobuf.load(`${this.protoSrc}/${module}.proto`)
-      // const paramProto = root.lookupType(`${module}.${strFn}`)
-      // const msg = paramProto.decode(params[0])
-      // const msgObj = paramProto.toObject(msg)
-
-      // const paramData = Object.keys(msgObj).map(key => msgObj[key])
-
       const paramData = await this._paramDecoder(module, strFn, params) || params
-      console.log({ paramData })
-
       const result = await action(...paramData)
 
-      // encode to protobuf
-      // return encoded
-
-      console.log({ result })
-
-      return result
+      return await this._resultEncoder(module, strFn, result) || result
     }
   }
 
@@ -172,5 +159,9 @@ export class Worker {
 
   setParamDecoder (fn: Function) {
     this._paramDecoder = fn
+  }
+
+  setResultEncoder (fn: Function) {
+    this._resultEncoder = fn
   }
 }

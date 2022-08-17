@@ -17,6 +17,7 @@ export declare class Worker {
     heartbeatLiveness: number;
     heartbeatInterval: number;
     _paramDecoder: Function;
+    _resultEncoder: Function;
     actions: Map<string, Function>;
     constructor(config: IWorkerOption);
     start(recon?: boolean): Promise<void>;
@@ -27,5 +28,6 @@ export declare class Worker {
     process(client: Buffer, ...req: Buffer[]): Promise<any>;
     anchorExits(): void;
     setParamDecoder(fn: Function): void;
+    setResultEncoder(fn: Function): void;
 }
 export {};

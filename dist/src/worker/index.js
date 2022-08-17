@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Worker = void 0;
 const logger_1 = __importDefault(require("../logger"));
-const protobuf = require('protobufjs');
 const zeromq_1 = require("zeromq");
 const types_1 = require("../types");
 const { WORKER } = types_1.Header;
@@ -13,6 +12,7 @@ const { READY, REPLY, DISCONNECT, HEARTBEAT, REQUEST } = types_1.Message;
 class Worker {
     constructor(config) {
         this._paramDecoder = async () => { };
+        this._resultEncoder = async () => { };
         this.actions = new Map();
         this.address = config.address;
         this.svcName = config.service;
@@ -95,18 +95,9 @@ class Worker {
         }
         else {
             logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`);
-            // const root = await protobuf.load(`${this.protoSrc}/${module}.proto`)
-            // const paramProto = root.lookupType(`${module}.${strFn}`)
-            // const msg = paramProto.decode(params[0])
-            // const msgObj = paramProto.toObject(msg)
-            // const paramData = Object.keys(msgObj).map(key => msgObj[key])
             const paramData = await this._paramDecoder(module, strFn, params) || params;
-            console.log({ paramData });
             const result = await action(...paramData);
-            // encode to protobuf
-            // return encoded
-            console.log({ result });
-            return result;
+            return await this._resultEncoder(module, strFn, result) || result;
         }
     }
     anchorExits() {
@@ -123,6 +114,9 @@ class Worker {
     // -- expiremental
     setParamDecoder(fn) {
         this._paramDecoder = fn;
+    }
+    setResultEncoder(fn) {
+        this._resultEncoder = fn;
     }
 }
 exports.Worker = Worker;
