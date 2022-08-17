@@ -134,10 +134,16 @@ export class Worker {
     } else {
       logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`)
 
-      const paramData = await this._paramDecoder(module, strFn, params) || params
-      const result = await action(...paramData)
+      try {
+        const paramData = await this._paramDecoder(module, strFn, params) || params
+        const result = await action(...paramData)
+        const encodedResult = await this._resultEncoder(module, strFn, result) || result
 
-      return await this._resultEncoder(module, strFn, result) || result
+        return encodedResult
+      } catch (err) {
+        console.log('-- [w] err', err)
+        // TODO: reply error. how? on mdp
+      }
     }
   }
 
