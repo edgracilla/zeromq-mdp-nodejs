@@ -26,7 +26,7 @@ export class Worker {
   heartbeatLiveness: number
   heartbeatInterval: number
 
-  _paramDecoder: Function = () => {}
+  _paramDecoder: Function = async () => {}
   actions: Map<string, Function> = new Map()
 
   constructor (config: IWorkerOption) {
@@ -140,7 +140,8 @@ export class Worker {
 
       // const paramData = Object.keys(msgObj).map(key => msgObj[key])
 
-      const paramData = this._paramDecoder(module, strFn, params) || params
+      const paramData = await this._paramDecoder(module, strFn, params) || params
+      console.log({ paramData })
 
       const result = await action(...paramData)
 

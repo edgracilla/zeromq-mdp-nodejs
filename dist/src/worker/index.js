@@ -12,7 +12,7 @@ const { WORKER } = types_1.Header;
 const { READY, REPLY, DISCONNECT, HEARTBEAT, REQUEST } = types_1.Message;
 class Worker {
     constructor(config) {
-        this._paramDecoder = () => { };
+        this._paramDecoder = async () => { };
         this.actions = new Map();
         this.address = config.address;
         this.svcName = config.service;
@@ -95,13 +95,13 @@ class Worker {
         }
         else {
             logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`);
-            // TODO: plugin based encoder/decoder
             // const root = await protobuf.load(`${this.protoSrc}/${module}.proto`)
             // const paramProto = root.lookupType(`${module}.${strFn}`)
             // const msg = paramProto.decode(params[0])
             // const msgObj = paramProto.toObject(msg)
             // const paramData = Object.keys(msgObj).map(key => msgObj[key])
-            const paramData = this._paramDecoder(module, strFn, params) || params;
+            const paramData = await this._paramDecoder(module, strFn, params) || params;
+            console.log({ paramData });
             const result = await action(...paramData);
             // encode to protobuf
             // return encoded
