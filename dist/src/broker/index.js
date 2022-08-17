@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Broker = void 0;
-const logger_1 = __importDefault(require("../logger"));
 const service_1 = __importDefault(require("./service"));
 const zeromq_1 = require("zeromq");
 const types_1 = require("../types");
@@ -21,9 +20,10 @@ class Broker {
         this.address = address;
         this.svcConf = options;
         this.socket = new zeromq_1.Router(routerConfig);
+        this.logger = options.logger || console;
     }
     async listen() {
-        logger_1.default.info(`Listening on ${this.address}`);
+        this.logger.info(`Listening on ${this.address}`);
         await this.socket.bind(this.address);
         for await (const [sender, blank, header, ...rest] of this.socket) {
             switch (header.toString()) {
@@ -41,7 +41,7 @@ class Broker {
         const [serviceBuf, ...req] = rest;
         const svcName = serviceBuf.toString();
         if (!svcName) {
-            return logger_1.default.error(`[${CLIENT}] ${cStrId}.req -> empty service name!`);
+            return this.logger.error(`[${CLIENT}] ${cStrId}.req -> empty service name!`);
         }
         if (!this.services.has(svcName)) {
             this.services.set(svcName, new service_1.default(this.socket, svcName, this.svcConf));
@@ -62,9 +62,9 @@ class Broker {
         }
         const service = this.services.get(svcName);
         if (!svcName)
-            return logger_1.default.warn(`Worker ${wStrId} not in worker/service index.`);
+            return this.logger.warn(`Worker ${wStrId} not in worker/service index.`);
         if (!service)
-            return logger_1.default.warn(`Service '${svcName}' not found.`);
+            return this.logger.warn(`Service '${svcName}' not found.`);
         switch (msgType) {
             case READY: {
                 service.addWorker(worker);
@@ -84,7 +84,7 @@ class Broker {
                 break;
             }
             default: {
-                logger_1.default.warn(`Invalid worker message type: ${type}`);
+                this.logger.warn(`Invalid worker message type: ${type}`);
             }
         }
     }

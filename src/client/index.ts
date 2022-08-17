@@ -1,5 +1,3 @@
-import logger from '../logger'
-
 import { Request, Context } from 'zeromq'
 import { Header } from '../types'
 
@@ -9,9 +7,12 @@ interface ClientOption {
   address: string,
   timeout?: number
   retry?: number
+  logger?: any
 }
 
 export class Client {
+  logger: any
+
   socket: Request
   address: string
   timeout: number
@@ -19,17 +20,19 @@ export class Client {
 
   request: Array<[string, string, string[]]> = []
 
-  constructor (option: ClientOption) {
-    const { address, timeout, retry } = option
+  constructor (options: ClientOption) {
+    const { address, timeout, retry, logger } = options
 
     const context = new Context({
       blocky: false
     })
 
-    this.retry = retry || 3
-    this.timeout = timeout || 1000 * 10
     this.address = address
 
+    this.retry = retry || 3
+    this.logger = logger || console
+    this.timeout = timeout || 1000 * 10
+    
     this.socket = new Request({
       receiveTimeout: this.timeout,
       linger: 1,
@@ -47,7 +50,7 @@ export class Client {
       console.log('--rcvd resp', resp.toString())
       return resp.toString()
     } catch (err) {
-      logger.error(err)
+      this.logger.error(err)
     }
   }
 
@@ -63,13 +66,13 @@ export class Client {
         return resp.toString()
       } catch (err) {
         console.log(err)
-        logger.warn(`Timeout: calling service '${service}' x${tries+1} (${this.timeout / 1000}s)`)
+        this.logger.warn(`Timeout: calling service '${service}' x${tries+1} (${this.timeout / 1000}s)`)
       }
 
       tries++
     }
     
-    logger.error(`Client REQ failed: ${this.retry} retries consumed`)
+    this.logger.error(`Client REQ failed: ${this.retry} retries consumed`)
   }
     
 }

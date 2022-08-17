@@ -1,5 +1,3 @@
-import logger from '../logger'
-
 import Service from './service'
 import { Router } from 'zeromq'
 import { Header, Message, IOptions } from '../types'
@@ -13,6 +11,7 @@ const routerConfig = {
 }
 
 export class Broker {
+  logger: any
   socket: Router
   address: string
   svcConf: IOptions
@@ -24,10 +23,11 @@ export class Broker {
     this.address = address
     this.svcConf = options
     this.socket = new Router(routerConfig)
+    this.logger = options.logger || console
   }
   
   async listen () {
-    logger.info(`Listening on ${this.address}`)
+    this.logger.info(`Listening on ${this.address}`)
     await this.socket.bind(this.address)
 
     for await (const [sender, blank, header, ...rest] of this.socket) {
@@ -45,7 +45,7 @@ export class Broker {
     const svcName = serviceBuf.toString()
     
     if (!svcName) {
-      return logger.error(`[${CLIENT}] ${cStrId}.req -> empty service name!`)
+      return this.logger.error(`[${CLIENT}] ${cStrId}.req -> empty service name!`)
     }
 
     if (!this.services.has(svcName)) {
@@ -73,8 +73,8 @@ export class Broker {
 
     const service = this.services.get(svcName)!
 
-    if (!svcName) return logger.warn(`Worker ${wStrId} not in worker/service index.`)
-    if (!service) return logger.warn(`Service '${svcName}' not found.`)
+    if (!svcName) return this.logger.warn(`Worker ${wStrId} not in worker/service index.`)
+    if (!service) return this.logger.warn(`Service '${svcName}' not found.`)
 
     switch (msgType) {
       case READY: {
@@ -99,7 +99,7 @@ export class Broker {
       }
 
       default: {
-        logger.warn(`Invalid worker message type: ${type}`)
+        this.logger.warn(`Invalid worker message type: ${type}`)
       }
     }
   }

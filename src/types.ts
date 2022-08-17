@@ -22,4 +22,5 @@ export interface IOptions {
   heartbeatLiveness?: number
   heartbeatInterval?: number
   workerRequestTimeout?: number
+  logger?: any
 }

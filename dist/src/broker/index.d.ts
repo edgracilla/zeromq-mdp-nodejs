@@ -3,6 +3,7 @@ import Service from './service';
 import { Router } from 'zeromq';
 import { IOptions } from '../types';
 export declare class Broker {
+    logger: any;
     socket: Router;
     address: string;
     svcConf: IOptions;

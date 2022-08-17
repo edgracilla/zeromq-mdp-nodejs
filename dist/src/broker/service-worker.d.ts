@@ -1,13 +1,14 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import { Router } from 'zeromq';
 import EventEmitter from 'events';
+import { Router } from 'zeromq';
 import { IOptions } from '../types';
 declare class ServiceWorker extends EventEmitter {
     wId: Buffer;
     wStrId: string;
     socket: Router;
     svcName: string;
+    logger: any;
     seq: string;
     verbose: number;
     liveness: number;

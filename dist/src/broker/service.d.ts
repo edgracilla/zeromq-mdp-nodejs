@@ -1,12 +1,13 @@
 /// <reference types="node" />
-import ServiceWorker from './service-worker';
 import { Router } from 'zeromq';
 import { IOptions } from '../types';
+import ServiceWorker from './service-worker';
 declare class Service {
     name: string;
     socket: Router;
     verbose: number;
     options: IOptions;
+    logger: any;
     requests: Array<[Buffer, Buffer[]]>;
     svcWorkers: Map<string, ServiceWorker>;
     unoccupied: Set<string>;

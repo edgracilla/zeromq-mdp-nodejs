@@ -5,6 +5,7 @@ const svcConf = {
   heartbeatLiveness: 3,
   heartbeatInterval: 3000,
   workerRequestTimeout: 5000,
+  logger: console
 }
 
 const broker = new Broker('tcp://127.0.0.1:4000', svcConf);

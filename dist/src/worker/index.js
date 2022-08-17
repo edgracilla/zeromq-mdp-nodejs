@@ -1,10 +1,6 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Worker = void 0;
-const logger_1 = __importDefault(require("../logger"));
 const zeromq_1 = require("zeromq");
 const types_1 = require("../types");
 const { WORKER } = types_1.Header;
@@ -17,6 +13,7 @@ class Worker {
         this.address = config.address;
         this.svcName = config.service;
         this.protoSrc = config.protoSrc || '.';
+        this.logger = config.logger || console;
         this.heartbeatInterval = config.heartbeatInterval || 3000;
         this.liveness = this.heartbeatLiveness = config.heartbeatLiveness || 3;
         this.socket = new zeromq_1.Dealer();
@@ -31,7 +28,7 @@ class Worker {
         await this.socket.connect(this.address);
         await this.socket.send([null, WORKER, READY, this.svcName]);
         this.beater = setInterval(this.heartbeat.bind(this), this.heartbeatInterval);
-        logger_1.default.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP Worker started.`);
+        this.logger.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP Worker started.`);
         for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
             this.liveness = this.heartbeatLiveness;
             switch (type.toString()) {
@@ -47,8 +44,7 @@ class Worker {
         }
     }
     async handleClientRequest(client, ...req) {
-        const rep = await this.process(client, ...req);
-        console.log('--worker resp', rep);
+        const rep = await this.triggerAction(client, ...req);
         try {
             await this.socket.send([null, WORKER, REPLY, client, null, rep]);
         }
@@ -71,7 +67,7 @@ class Worker {
         }
     }
     async stop() {
-        logger_1.default.info(`[${this.svcName}] worker closed.`);
+        this.logger.info(`[${this.svcName}] worker closed.`);
         if (this.beater) {
             clearInterval(this.beater);
         }
@@ -81,20 +77,19 @@ class Worker {
         }
     }
     exposeFn(module, action) {
-        console.log(`${module}.${action.name.replace(/bound /i, '')}`, action);
         this.actions.set(`${module}.${action.name.replace(/bound /i, '')}`, action);
     }
-    async process(client, ...req) {
+    async triggerAction(client, ...req) {
         const [module, fn, ...params] = req;
         const strFn = fn.toString();
         const strModule = module.toString();
         const strClient = client.toString('hex');
         const action = this.actions.get(`${strModule}.${strFn}`);
         if (!action) {
-            logger_1.default.warn(`${this.svcName}.${fn}() not found.`);
+            this.logger.warn(`${this.svcName}.${fn}() not found.`);
         }
         else {
-            logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`);
+            this.logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`);
             try {
                 const paramData = await this._paramDecoder(module, strFn, params) || params;
                 const result = await action(...paramData);
@@ -102,7 +97,8 @@ class Worker {
                 return encodedResult;
             }
             catch (err) {
-                console.log('-- [w] err', err);
+                this.logger.warn(`[zWorker Err]`);
+                this.logger.error(err);
                 // TODO: reply error. how? on mdp
             }
         }

@@ -1,8 +1,6 @@
-import logger from '../logger'
-import ServiceWorker from './service-worker'
-
 import { Router } from 'zeromq'
 import { Header, IOptions } from '../types'
+import ServiceWorker from './service-worker'
 
 const { CLIENT } = Header
 
@@ -11,6 +9,7 @@ class Service {
   socket: Router
   verbose: number
   options: IOptions
+  logger: any
 
   requests: Array<[Buffer, Buffer[]]> = []
   svcWorkers: Map<string, ServiceWorker> = new Map()
@@ -20,7 +19,7 @@ class Service {
     this.name = name
     this.socket = socket
     this.options = options
-
+    this.logger = options.logger || console
     this.verbose = options.verbose === undefined ? 1 : options.verbose
   }
 
@@ -31,7 +30,7 @@ class Service {
     if (sWorker) {
       // paranoia, this might happen? if this happens, do not recreate SW as it
       // resets beater and might halt running operations
-      logger.warn(`Adding worker that is already exist! ${wStrId}`)
+      this.logger.warn(`Adding worker that is already exist! ${wStrId}`)
     } else {
       const nWorker = new ServiceWorker(this.name, this.socket, worker, this.options)
 
@@ -41,7 +40,7 @@ class Service {
       this.unoccupied.add(wStrId)
 
       if (this.verbose > 0) {
-        logger.info(`${this.name} worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+        this.logger.info(`${this.name} worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
       }
       
       this.consumeRequests('ADW')
@@ -67,11 +66,11 @@ class Service {
     } else {
       // TODO: handle occupied worker deletion
       // wait till worker process done? or force delete?
-      logger.error('-- svc worker rmv failed!')
+      this.logger.error('-- svc worker rmv failed!')
     }
 
     if (this.verbose > 0) {
-      logger.info(`${this.name} worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
+      this.logger.info(`${this.name} worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`)
     }
 
     this.consumeRequests('RMW')
@@ -79,7 +78,7 @@ class Service {
 
   dispatchClientRequest(client: Buffer, ...req: Buffer[]) {
     if (this.verbose > 2) {
-      logger.info(`[${CLIENT}] ${client.toString('hex')}.req -> ${this.name}.${req[0].toString()}()`)
+      this.logger.info(`[${CLIENT}] ${client.toString('hex')}.req -> ${this.name}.${req[0].toString()}()`)
     }
 
     this.requests.push([client, req])
@@ -112,7 +111,7 @@ class Service {
     const sWorker = this.svcWorkers.get(wStrId)!
 
     if (!sWorker) {
-      return logger.warn(`Unable to reset liveness! missing worker ${wStrId}`)
+      return this.logger.warn(`Unable to reset liveness! missing worker ${wStrId}`)
     }
 
     sWorker.resetLiveness()

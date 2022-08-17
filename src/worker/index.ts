@@ -1,5 +1,3 @@
-import logger from '../logger'
-
 import { Dealer } from 'zeromq'
 import { Header, Message } from '../types'
 
@@ -12,9 +10,12 @@ interface IWorkerOption {
   protoSrc?: string
   heartbeatInterval?: number
   heartbeatLiveness?: number
+  logger?: any
 }
 
 export class Worker {
+  logger: any
+
   socket: Dealer
   address: string
   svcName: string
@@ -35,6 +36,7 @@ export class Worker {
     this.svcName = config.service
     this.protoSrc = config.protoSrc || '.'
 
+    this.logger = config.logger || console
     this.heartbeatInterval = config.heartbeatInterval || 3000
     this.liveness = this.heartbeatLiveness = config.heartbeatLiveness || 3
     
@@ -55,7 +57,7 @@ export class Worker {
 
     this.beater = setInterval(this.heartbeat.bind(this), this.heartbeatInterval)
 
-    logger.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP Worker started.`)
+    this.logger.info(`${recon ? 'Reconnect: ' : ''}[${this.svcName}] ZMDP Worker started.`)
 
     for await (const [blank, header, type, client, blank2, ...req] of this.socket) {
       this.liveness = this.heartbeatLiveness
@@ -76,9 +78,7 @@ export class Worker {
   }
 
   async handleClientRequest (client: Buffer, ...req: Buffer[]) {
-    const rep = await this.process(client, ...req)
-
-    console.log('--worker resp', rep)
+    const rep = await this.triggerAction(client, ...req)
 
     try {
       await this.socket.send([null, WORKER, REPLY, client, null, rep])
@@ -103,7 +103,7 @@ export class Worker {
   }
 
   async stop() {
-    logger.info(`[${this.svcName}] worker closed.`)
+    this.logger.info(`[${this.svcName}] worker closed.`)
 
     if (this.beater) {
       clearInterval(this.beater)
@@ -116,11 +116,10 @@ export class Worker {
   }
 
   exposeFn (module: string, action: Function) {
-    console.log(`${module}.${action.name.replace(/bound /i, '')}`, action)
     this.actions.set(`${module}.${action.name.replace(/bound /i, '')}`, action)
   }
 
-  async process(client: Buffer, ...req: Buffer[]) {
+  async triggerAction(client: Buffer, ...req: Buffer[]) {
     const [module, fn, ...params] = req
 
     const strFn = fn.toString()
@@ -130,9 +129,9 @@ export class Worker {
     const action = this.actions.get(`${strModule}.${strFn}`)!
 
     if (!action) {
-      logger.warn(`${this.svcName}.${fn}() not found.`)
+      this.logger.warn(`${this.svcName}.${fn}() not found.`)
     } else {
-      logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`)
+      this.logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`)
 
       try {
         const paramData = await this._paramDecoder(module, strFn, params) || params
@@ -141,7 +140,8 @@ export class Worker {
 
         return encodedResult
       } catch (err) {
-        console.log('-- [w] err', err)
+        this.logger.warn(`[zWorker Err]`)
+        this.logger.error(err)
         // TODO: reply error. how? on mdp
       }
     }

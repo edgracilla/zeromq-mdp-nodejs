@@ -1,23 +1,20 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Client = void 0;
-const logger_1 = __importDefault(require("../logger"));
 const zeromq_1 = require("zeromq");
 const types_1 = require("../types");
 const { CLIENT } = types_1.Header;
 class Client {
-    constructor(option) {
+    constructor(options) {
         this.request = [];
-        const { address, timeout, retry } = option;
+        const { address, timeout, retry, logger } = options;
         const context = new zeromq_1.Context({
             blocky: false
         });
-        this.retry = retry || 3;
-        this.timeout = timeout || 1000 * 10;
         this.address = address;
+        this.retry = retry || 3;
+        this.logger = logger || console;
+        this.timeout = timeout || 1000 * 10;
         this.socket = new zeromq_1.Request({
             receiveTimeout: this.timeout,
             linger: 1,
@@ -33,7 +30,7 @@ class Client {
             return resp.toString();
         }
         catch (err) {
-            logger_1.default.error(err);
+            this.logger.error(err);
         }
     }
     async sendRcv2(service, fn, ...params) {
@@ -47,11 +44,11 @@ class Client {
             }
             catch (err) {
                 console.log(err);
-                logger_1.default.warn(`Timeout: calling service '${service}' x${tries + 1} (${this.timeout / 1000}s)`);
+                this.logger.warn(`Timeout: calling service '${service}' x${tries + 1} (${this.timeout / 1000}s)`);
             }
             tries++;
         }
-        logger_1.default.error(`Client REQ failed: ${this.retry} retries consumed`);
+        this.logger.error(`Client REQ failed: ${this.retry} retries consumed`);
     }
 }
 exports.Client = Client;

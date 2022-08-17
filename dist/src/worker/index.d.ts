@@ -6,8 +6,10 @@ interface IWorkerOption {
     protoSrc?: string;
     heartbeatInterval?: number;
     heartbeatLiveness?: number;
+    logger?: any;
 }
 export declare class Worker {
+    logger: any;
     socket: Dealer;
     address: string;
     svcName: string;
@@ -25,7 +27,7 @@ export declare class Worker {
     heartbeat(): Promise<void>;
     stop(): Promise<void>;
     exposeFn(module: string, action: Function): void;
-    process(client: Buffer, ...req: Buffer[]): Promise<any>;
+    triggerAction(client: Buffer, ...req: Buffer[]): Promise<any>;
     anchorExits(): void;
     setParamDecoder(fn: Function): void;
     setResultEncoder(fn: Function): void;

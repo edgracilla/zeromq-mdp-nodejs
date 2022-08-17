@@ -3,9 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const logger_1 = __importDefault(require("../logger"));
-const service_worker_1 = __importDefault(require("./service-worker"));
 const types_1 = require("../types");
+const service_worker_1 = __importDefault(require("./service-worker"));
 const { CLIENT } = types_1.Header;
 class Service {
     constructor(socket, name, options = {}) {
@@ -15,6 +14,7 @@ class Service {
         this.name = name;
         this.socket = socket;
         this.options = options;
+        this.logger = options.logger || console;
         this.verbose = options.verbose === undefined ? 1 : options.verbose;
     }
     addWorker(worker) {
@@ -23,7 +23,7 @@ class Service {
         if (sWorker) {
             // paranoia, this might happen? if this happens, do not recreate SW as it
             // resets beater and might halt running operations
-            logger_1.default.warn(`Adding worker that is already exist! ${wStrId}`);
+            this.logger.warn(`Adding worker that is already exist! ${wStrId}`);
         }
         else {
             const nWorker = new service_worker_1.default(this.name, this.socket, worker, this.options);
@@ -31,7 +31,7 @@ class Service {
             this.svcWorkers.set(wStrId, nWorker);
             this.unoccupied.add(wStrId);
             if (this.verbose > 0) {
-                logger_1.default.info(`${this.name} worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`);
+                this.logger.info(`${this.name} worker added: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`);
             }
             this.consumeRequests('ADW');
         }
@@ -52,16 +52,16 @@ class Service {
         else {
             // TODO: handle occupied worker deletion
             // wait till worker process done? or force delete?
-            logger_1.default.error('-- svc worker rmv failed!');
+            this.logger.error('-- svc worker rmv failed!');
         }
         if (this.verbose > 0) {
-            logger_1.default.info(`${this.name} worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`);
+            this.logger.info(`${this.name} worker rmved: ${wStrId} (${this.unoccupied.size}/${this.svcWorkers.size})`);
         }
         this.consumeRequests('RMW');
     }
     dispatchClientRequest(client, ...req) {
         if (this.verbose > 2) {
-            logger_1.default.info(`[${CLIENT}] ${client.toString('hex')}.req -> ${this.name}.${req[0].toString()}()`);
+            this.logger.info(`[${CLIENT}] ${client.toString('hex')}.req -> ${this.name}.${req[0].toString()}()`);
         }
         this.requests.push([client, req]);
         this.consumeRequests('DCR');
@@ -85,7 +85,7 @@ class Service {
     resetWorkerLiveness(wStrId) {
         const sWorker = this.svcWorkers.get(wStrId);
         if (!sWorker) {
-            return logger_1.default.warn(`Unable to reset liveness! missing worker ${wStrId}`);
+            return this.logger.warn(`Unable to reset liveness! missing worker ${wStrId}`);
         }
         sWorker.resetLiveness();
     }
