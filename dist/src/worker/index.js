@@ -12,6 +12,7 @@ const { WORKER } = types_1.Header;
 const { READY, REPLY, DISCONNECT, HEARTBEAT, REQUEST } = types_1.Message;
 class Worker {
     constructor(config) {
+        this._paramDecoder = () => { };
         this.actions = new Map();
         this.address = config.address;
         this.svcName = config.service;
@@ -94,14 +95,18 @@ class Worker {
         }
         else {
             logger_1.default.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`);
-            // -- POC only
-            const root = await protobuf.load(`${this.protoSrc}/${module}.proto`);
-            const Proto = root.lookupType(`${module}.${strFn}`);
-            const msg = Proto.decode(params[0]);
-            const msgObj = Proto.toObject(msg);
-            const paramData = Object.keys(msgObj).map(key => msgObj[key]);
-            // --
-            return await action(...paramData);
+            // TODO: plugin based encoder/decoder
+            // const root = await protobuf.load(`${this.protoSrc}/${module}.proto`)
+            // const paramProto = root.lookupType(`${module}.${strFn}`)
+            // const msg = paramProto.decode(params[0])
+            // const msgObj = paramProto.toObject(msg)
+            // const paramData = Object.keys(msgObj).map(key => msgObj[key])
+            const paramData = this._paramDecoder(module, strFn, params) || params;
+            const result = await action(...paramData);
+            // encode to protobuf
+            // return encoded
+            console.log({ result });
+            return result;
         }
     }
     anchorExits() {
@@ -114,6 +119,10 @@ class Worker {
             };
             process.on(signal, sigFn[signal]);
         });
+    }
+    // -- expiremental
+    setParamDecoder(fn) {
+        this._paramDecoder = fn;
     }
 }
 exports.Worker = Worker;

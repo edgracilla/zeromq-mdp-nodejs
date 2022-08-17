@@ -26,6 +26,7 @@ export class Worker {
   heartbeatLiveness: number
   heartbeatInterval: number
 
+  _paramDecoder: Function = () => {}
   actions: Map<string, Function> = new Map()
 
   constructor (config: IWorkerOption) {
@@ -132,16 +133,23 @@ export class Worker {
     } else {
       logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`)
 
-      // -- POC only
-      const root = await protobuf.load(`${this.protoSrc}/${module}.proto`)
-      const Proto = root.lookupType(`${module}.${strFn}`)
-      const msg = Proto.decode(params[0])
-      const msgObj = Proto.toObject(msg)
+      // const root = await protobuf.load(`${this.protoSrc}/${module}.proto`)
+      // const paramProto = root.lookupType(`${module}.${strFn}`)
+      // const msg = paramProto.decode(params[0])
+      // const msgObj = paramProto.toObject(msg)
 
-      const paramData = Object.keys(msgObj).map(key => msgObj[key])
-      // --
+      // const paramData = Object.keys(msgObj).map(key => msgObj[key])
 
-      return await action(...paramData)
+      const paramData = this._paramDecoder(module, strFn, params) || params
+
+      const result = await action(...paramData)
+
+      // encode to protobuf
+      // return encoded
+
+      console.log({ result })
+
+      return result
     }
   }
 
@@ -157,5 +165,11 @@ export class Worker {
 
       process.on(signal, sigFn[signal])
     })
+  }
+
+  // -- expiremental
+
+  setParamDecoder (fn: Function) {
+    this._paramDecoder = fn
   }
 }
