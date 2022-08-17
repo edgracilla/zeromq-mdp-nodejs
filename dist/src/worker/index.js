@@ -89,7 +89,7 @@ class Worker {
             this.logger.warn(`${this.svcName}.${fn}() not found.`);
         }
         else {
-            this.logger.info(`[${strClient}] ${this.svcName}.${module}.${fn}()`);
+            this.logger.info(`[${strClient}] ${this.svcName} ${module}.${fn}()`);
             try {
                 const paramData = await this._paramDecoder(module, strFn, params) || params;
                 const result = await action(...paramData);
@@ -97,7 +97,6 @@ class Worker {
                 return encodedResult;
             }
             catch (err) {
-                this.logger.warn(`[zWorker Err]`);
                 this.logger.error(err);
                 // TODO: reply error. how? on mdp
             }

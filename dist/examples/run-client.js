@@ -25,7 +25,7 @@ const main = async () => {
     const buf = ReadParams.encode(msg).finish();
     const resp = await client.sendRcv('tu-identity-api', 'access', 'read', buf);
     // const resp = await client.sendRcv('tu-identity-api', 'access', 'testPassSupportedTypes', 'str', '1', 'true', '{"foo":"bar"}')
-    console.log(resp);
+    console.log(resp === null || resp === void 0 ? void 0 : resp.toString());
 };
 // setInterval(main, 1000);
 main();

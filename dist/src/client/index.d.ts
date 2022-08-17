@@ -14,7 +14,7 @@ export declare class Client {
     retry: number;
     request: Array<[string, string, string[]]>;
     constructor(options: ClientOption);
-    sendRcv(service: string, module: string, fn: string, params: Buffer): Promise<string | undefined>;
+    sendRcv(service: string, module: string, fn: string, params: Buffer): Promise<Buffer | undefined>;
     sendRcv2(service: string, fn: string, ...params: string[]): Promise<string | undefined>;
 }
 export {};

@@ -32,7 +32,7 @@ const main = async () => {
 
   // const resp = await client.sendRcv('tu-identity-api', 'access', 'testPassSupportedTypes', 'str', '1', 'true', '{"foo":"bar"}')
 
-  console.log(resp)
+  console.log(resp?.toString())
 }
 
 // setInterval(main, 1000);
