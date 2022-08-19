@@ -1,7 +1,7 @@
-syntax = "proto3";
 package access;
-
 import "meta.proto";
+
+syntax = "proto3";
 
 message Access {
   string _id = 1;
@@ -43,4 +43,22 @@ message delete {
 message search {
   AccessQuery options = 1;
   Meta meta = 2;
+}
+
+// -- expiremental
+
+message createResult {
+  Access result = 1;
+}
+
+message readResult {
+  Access result = 1;
+}
+
+message updateResult {
+  Access result = 1;
+}
+
+message deleteResult {
+  bool result = 1;
 }
